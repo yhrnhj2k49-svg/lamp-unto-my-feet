@@ -1,0 +1,7 @@
+name = "lamp-reading"
+main = "src/index.ts"
+compatibility_date = "2025-01-15"
+compatibility_flags = ["nodejs_compat"]
+
+# Set the key with:  npx wrangler secret put ANTHROPIC_API_KEY
+# Never put it in this file — wrangler.toml is committed.

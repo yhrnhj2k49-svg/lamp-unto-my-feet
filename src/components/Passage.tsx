@@ -1,0 +1,101 @@
+import { memo } from "react";
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import * as Haptics from "expo-haptics";
+import { font, label, space } from "../theme";
+import { usePalette } from "../usePalette";
+import { toggle, useKept } from "../store/kept";
+import type { Verse } from "../data/verses";
+
+type Props = { verse: Verse; theme?: string; first?: boolean };
+
+/**
+ * A passage set the way a centre-column reference Bible sets one: the citation
+ * and apparatus out in the margin, the text itself given the width, and the
+ * glosses underneath in a smaller face so ancient text and modern explanation
+ * never get mistaken for one another.
+ */
+function PassageCard({ verse, theme, first }: Props) {
+  const c = usePalette();
+  const kept = useKept();
+  const isKept = kept.some((k) => k.ref === verse.ref);
+  const wide = useWindowDimensions().width >= 700;
+
+  const onKeep = () => {
+    Haptics.impactAsync(
+      isKept ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium
+    ).catch(() => {});
+    toggle(verse);
+  };
+
+  return (
+    <View
+      style={[
+        s.wrap,
+        wide && s.wrapWide,
+        { borderTopColor: first ? c.rule : c.ruleSoft, borderTopWidth: 1 },
+      ]}
+    >
+      <View style={[s.margin, wide && s.marginWide]}>
+        <Text style={[s.ref, { color: c.ink }]}>{verse.ref}</Text>
+        {theme ? <Text style={[label, s.theme, { color: c.gilt }]}>{theme}</Text> : null}
+        <Pressable
+          onPress={onKeep}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={isKept ? `Remove ${verse.ref} from kept` : `Keep ${verse.ref}`}
+          accessibilityState={{ selected: isKept }}
+        >
+          <Text
+            style={[
+              s.keep,
+              { color: isKept ? c.rubric : c.ink3, borderBottomColor: isKept ? c.rubric : c.rule },
+            ]}
+          >
+            {isKept ? "Kept" : "Keep"}
+          </Text>
+        </Pressable>
+      </View>
+
+      <View style={s.body}>
+        <Text style={[s.verse, { color: c.ink }]}>
+          <Text style={[s.pilcrow, { color: c.rubric }]}>¶ </Text>
+          {verse.text}
+        </Text>
+
+        <View style={s.notes}>
+          <Text style={[s.note, { color: c.ink2 }]}>
+            <Text style={[label, { color: c.gilt }]}>In plain words  </Text>
+            {verse.plain}
+          </Text>
+          <Text style={[s.note, { color: c.ink2 }]}>
+            <Text style={[label, { color: c.gilt }]}>Why this one  </Text>
+            {verse.why}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const s = StyleSheet.create({
+  wrap: { paddingVertical: space.lg, gap: space.md },
+  wrapWide: { flexDirection: "row", gap: 34 },
+  margin: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: space.md },
+  marginWide: {
+    flexDirection: "column",
+    alignItems: "flex-end",
+    width: 150,
+    gap: space.sm,
+    paddingTop: 3,
+  },
+  body: { flex: 1, minWidth: 0 },
+  ref: { fontFamily: font.displayMedium, fontSize: 17 },
+  theme: {},
+  keep: { fontFamily: font.ui, fontSize: 12, letterSpacing: 0.5, borderBottomWidth: 1, paddingBottom: 1 },
+  verse: { fontFamily: font.serif, fontSize: 19.5, lineHeight: 32 },
+  pilcrow: { fontFamily: font.serifBold, fontSize: 19.5 },
+  notes: { marginTop: space.md, gap: space.sm },
+  note: { fontFamily: font.ui, fontSize: 13.5, lineHeight: 21 },
+});
+
+export default memo(PassageCard);

@@ -1,0 +1,22 @@
+{
+  "name": "lamp-reading-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:node": "tsx src/local.ts",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.124.0",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260908.1",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.129.1",
+    "tsx": "^4.19.0"
+  }
+}
