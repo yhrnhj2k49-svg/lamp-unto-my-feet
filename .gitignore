@@ -30,8 +30,6 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
 
 # typescript
 *.tsbuildinfo
@@ -41,5 +39,10 @@ yarn-error.*
 /android
 .scratch/
 
-# local env (endpoint URL); commit .env.example instead
-.env
+# local env files; .env.example is the only one committed
+.env*
+!.env.example
+
+# store submission credentials for eas submit; never commit
+*service-account*.json
+credentials.json

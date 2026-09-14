@@ -1,3 +1,7 @@
 node_modules/
 .wrangler/
-.dev.vars
+
+# secrets; .dev.vars.example is the only one committed
+.dev.vars*
+!.dev.vars.example
+.env*

@@ -1,0 +1,38 @@
+#!/bin/sh
+# Blocks a commit that would publish a secret.
+# Enabled with:  git config core.hooksPath .githooks
+# For a genuine false positive:  git commit --no-verify
+
+fail=0
+
+# Local secret files are never committed, even when force-added.
+bad=$(git diff --cached --name-only --diff-filter=ACMR \
+  | grep -E '(^|/)\.(env|dev\.vars)(\.[^/]*)?$' | grep -vE '\.example$')
+if [ -n "$bad" ]; then
+  printf '%s\n' "$bad" | sed 's/^/blocked: local secrets file, never committed: /'
+  fail=1
+fi
+
+# Secret patterns in added lines. This folder is excluded so the patterns
+# below do not match themselves.
+added=$(git diff --cached -U0 --diff-filter=ACMR -- . ':(exclude).githooks' \
+  | grep '^+' | grep -v '^+++')
+
+check() {
+  if printf '%s\n' "$added" | grep -qE "$2"; then
+    echo "blocked: staged changes contain what looks like $1"
+    fail=1
+  fi
+}
+
+check "an Anthropic API key"     'sk-ant-[A-Za-z0-9_-]{20,}'
+check "a private key"            'BEGIN [A-Z ]*PRIVATE KEY'
+check "a Google service account" '"private_key_id"'
+check "a GitHub token"           'gh[pousr]_[A-Za-z0-9]{30,}'
+check "an AWS access key"        'AKIA[0-9A-Z]{16}'
+
+if [ "$fail" -ne 0 ]; then
+  echo
+  echo "Nothing was committed. Unstage the file with: git restore --staged <file>"
+  exit 1
+fi

@@ -78,8 +78,8 @@ Levers, cheapest first:
 
 ## Shipping to the App Store and Google Play
 
-Builds happen in Expo's cloud, so the missing local Xcode and Android SDK on
-this machine are not a blocker.
+Builds happen in Expo's cloud, so you don't need Xcode or Android Studio
+installed.
 
 ### 1. Accounts you have to create yourself
 
@@ -160,7 +160,7 @@ So the app posts to this, and this holds the key.
 
 ### Deploy it
 
-Wrangler needs Node 22 (`nvm install 22` — nvm is already on this machine):
+Wrangler needs Node 22 or later (with nvm: `nvm install 22`):
 
 ```bash
 cd server
@@ -276,3 +276,10 @@ Both light and dark are designed, not inverted.
 King James Version, public domain. The plain reading beside each passage is a
 paraphrase written for this app, not a translation — where they differ, the
 scripture is what counts.
+
+---
+
+## License
+
+All rights reserved — see [LICENSE](LICENSE). The code is public to read, not to
+reuse or republish. The King James Version text is not covered by that notice.
