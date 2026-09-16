@@ -1,8 +1,9 @@
 // Design tokens for Lamp Unto My Feet.
 //
-// The palette comes from the material world of a printed Bible: India-paper
-// bone, blue-black printer's ink, the oxidised vermilion of rubricated
-// pilcrows, binding-cloth indigo, and the gilt of a gilded page edge.
+// The palette comes from an illuminated Bible rather than a plain printed one:
+// ivory vellum catching the light, ultramarine ground from lapis lazuli, gold
+// leaf, and the oxidised vermilion of a rubricated pilcrow. Day is a page in
+// sunlight; night is the same page by candle.
 
 export type Scheme = "light" | "dark";
 
@@ -16,39 +17,45 @@ export type Palette = {
   rubric: string;
   indigo: string;
   gilt: string;
+  giltBright: string;
   rule: string;
   ruleSoft: string;
   rubricWash: string;
+  glow: string;
 };
 
 export const palettes: Record<Scheme, Palette> = {
   light: {
-    ground: "#EEEDE7",
-    panel: "#F5F4EF",
-    recess: "#E6E4DB",
-    ink: "#1B1E28",
-    ink2: "#585B69",
-    ink3: "#84858F",
-    rubric: "#9E2B20",
-    indigo: "#2C3766",
-    gilt: "#8E6E3A",
-    rule: "#CFCCC1",
-    ruleSoft: "#DFDCD3",
-    rubricWash: "rgba(158,43,32,0.07)",
+    ground: "#FCFAF5",
+    panel: "#FFFFFF",
+    recess: "#F5F0E4",
+    ink: "#1C1A2E",
+    ink2: "#55506B",
+    ink3: "#8A8499",
+    rubric: "#A82B1E",
+    indigo: "#2E3F8F",
+    gilt: "#8A6714",
+    giltBright: "#C9A227",
+    rule: "#E4DCC9",
+    ruleSoft: "#EFE9DA",
+    rubricWash: "rgba(168,43,30,0.06)",
+    glow: "rgba(201,162,39,0.13)",
   },
   dark: {
-    ground: "#14161C",
-    panel: "#191C24",
-    recess: "#1E212A",
-    ink: "#E5E1D6",
-    ink2: "#9C9DA8",
-    ink3: "#787985",
-    rubric: "#D4695B",
-    indigo: "#93A2DD",
-    gilt: "#BFA067",
-    rule: "#2E323C",
-    ruleSoft: "#262A33",
-    rubricWash: "rgba(212,105,91,0.14)",
+    ground: "#131527",
+    panel: "#1A1D33",
+    recess: "#1F2240",
+    ink: "#F1EBDD",
+    ink2: "#A9A3BC",
+    ink3: "#7D7793",
+    rubric: "#E0796A",
+    indigo: "#93A6EC",
+    gilt: "#E0BC63",
+    giltBright: "#F0D489",
+    rule: "#2E3253",
+    ruleSoft: "#242745",
+    rubricWash: "rgba(224,121,106,0.14)",
+    glow: "rgba(224,188,99,0.10)",
   },
 };
 

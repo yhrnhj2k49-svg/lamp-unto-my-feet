@@ -20,6 +20,7 @@ import {
   Archivo_600SemiBold,
 } from "@expo-google-fonts/archivo";
 import { hydrate } from "../src/store/kept";
+import { hydrateBibles } from "../src/bible/store";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -40,6 +41,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     void hydrate();
+    void hydrateBibles();
   }, []);
 
   useEffect(() => {

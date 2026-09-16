@@ -5,6 +5,7 @@ import { CRISIS_NOTE } from "../../src/engine/safety";
 import { aiAvailable } from "../../src/engine/ai";
 import { font, label, space } from "../../src/theme";
 import { usePalette } from "../../src/usePalette";
+import PageGlow from "../../src/components/PageGlow";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   const c = usePalette();
@@ -24,14 +25,16 @@ export default function AboutScreen() {
   );
 
   return (
+    <View style={{ flex: 1, backgroundColor: c.ground }}>
+    <PageGlow />
     <ScrollView
-      style={{ backgroundColor: c.ground }}
+      style={{ backgroundColor: "transparent" }}
       contentContainerStyle={[
         s.page,
         { paddingTop: insets.top + space.lg, paddingBottom: space.xxl },
       ]}
     >
-      <View style={[s.head, { borderBottomColor: c.rule }]}>
+      <View style={[s.head, { borderBottomColor: c.giltBright }]}>
         <Text style={[s.title, { color: c.ink }]}>About</Text>
       </View>
 
@@ -125,6 +128,7 @@ export default function AboutScreen() {
         Moda and Archivo. Version 1.0.0.
       </Text>
     </ScrollView>
+    </View>
   );
 }
 

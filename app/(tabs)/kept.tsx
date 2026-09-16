@@ -4,6 +4,7 @@ import * as Haptics from "expo-haptics";
 import { drop, useKept } from "../../src/store/kept";
 import { font, label, space } from "../../src/theme";
 import { usePalette } from "../../src/usePalette";
+import PageGlow from "../../src/components/PageGlow";
 
 export default function KeptScreen() {
   const c = usePalette();
@@ -11,14 +12,16 @@ export default function KeptScreen() {
   const kept = useKept();
 
   return (
+    <View style={{ flex: 1, backgroundColor: c.ground }}>
+    <PageGlow />
     <ScrollView
-      style={{ backgroundColor: c.ground }}
+      style={{ backgroundColor: "transparent" }}
       contentContainerStyle={[
         s.page,
         { paddingTop: insets.top + space.lg, paddingBottom: space.xxl },
       ]}
     >
-      <View style={[s.head, { borderBottomColor: c.rule }]}>
+      <View style={[s.head, { borderBottomColor: c.giltBright }]}>
         <Text style={[s.title, { color: c.ink }]}>Kept</Text>
         <Text style={[label, { color: c.gilt }]}>
           {kept.length === 0 ? "Nothing yet" : `${kept.length} passage${kept.length === 1 ? "" : "s"}`}
@@ -62,6 +65,7 @@ export default function KeptScreen() {
         ))
       )}
     </ScrollView>
+    </View>
   );
 }
 

@@ -18,6 +18,7 @@ import { CRISIS_NOTE, needsCrisisNote } from "../../src/engine/safety";
 import { aiAvailable, closerReading, ReadingError } from "../../src/engine/ai";
 import type { Theme } from "../../src/data/verses";
 import Passage from "../../src/components/Passage";
+import PageGlow from "../../src/components/PageGlow";
 import { font, label, space } from "../../src/theme";
 import { usePalette } from "../../src/usePalette";
 
@@ -88,9 +89,10 @@ export default function ReadScreen() {
       style={{ flex: 1, backgroundColor: c.ground }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
+      <PageGlow />
       <ScrollView
         ref={scroller}
-        style={{ backgroundColor: c.ground }}
+        style={{ backgroundColor: "transparent" }}
         contentContainerStyle={[
           s.page,
           { paddingTop: insets.top + space.lg, paddingBottom: space.xxl },
@@ -98,7 +100,7 @@ export default function ReadScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* masthead */}
-        <View style={[s.masthead, { borderBottomColor: c.rule }]}>
+        <View style={[s.masthead, { borderBottomColor: c.giltBright }]}>
           <Text style={[s.wordmark, { color: c.ink }]}>Lamp Unto My Feet</Text>
           <Text style={[s.epigraph, { color: c.ink2 }]}>
             Thy word is a lamp unto my feet, and a light unto my path.
