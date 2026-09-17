@@ -44,7 +44,7 @@ single words, because "lost my job" and "lost my mum" share a word and nothing
 else; how you say you feel counts for more than what the situation is about. It
 runs with no network, and it is what answers when a reading cannot be made.
 
-**How to live it.** Every passage has a "How to live this" section: the setting (who wrote it, to whom, and what was happening), what it asks of you, and a question to sit with. Claude writes all three for the situation you describe; offline they come from `src/data/living.ts`, written for each of the 167 passages. Settings say "traditionally" wherever authorship is not certain.
+**How to live it.** Every passage has a "How to live this" section: the setting (who wrote it, to whom, and what was happening), what it asks of you, and a question to sit with. All three come from `src/data/living.ts`, written for each of the 167 passages; settings say "traditionally" wherever authorship is not certain. When a passage came from Claude's reading, opening the section asks Claude to write the second and third for the situation you described. The general version shows while it writes, and stays if there is no connection. Nothing is written until someone opens it, so the reading itself never waits on it.
 
 **Crisis detection.** If someone writes that they are in danger, helpline numbers
 appear above the passages — alongside them, never instead of them.
@@ -73,12 +73,12 @@ Claude's reading replaces them when it arrives.
 
 Levers:
 
-- **`READING_EFFORT`**: `low`, `medium`, `high`, `xhigh` or `max`. Change it on the
+- **`READING_EFFORT`** and **`LIVING_EFFORT`**, for readings and for "How to live this": `low`, `medium`, `high`, `xhigh` or `max`. Change it on the
   deployed worker without touching code by adding `READING_EFFORT = "high"` under
   `[vars]` in `server/wrangler.toml`, or set it as an environment variable locally.
 - **The model.** `claude-sonnet-5` costs $2/$10 per million tokens against Opus 5's
   $5/$25. Opus is the better reader.
-- **Rate limiting.** The worker caps 20 readings per IP per hour, in memory. That
+- **Rate limiting.** The worker caps 20 readings and 80 "How to live this" requests per IP per hour, in memory. That
   blunts casual abuse but does not prevent it; put Cloudflare's Rate Limiting
   binding in front before you advertise the app anywhere.
 

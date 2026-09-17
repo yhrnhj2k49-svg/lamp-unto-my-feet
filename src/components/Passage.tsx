@@ -1,14 +1,21 @@
-import { memo } from "react";
+import { memo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import * as Haptics from "expo-haptics";
 import { font, label, space } from "../theme";
 import { usePalette } from "../usePalette";
-import { toggle, useKept } from "../store/kept";
-import type { Verse } from "../data/verses";
+import { isKept as isKeptNow, toggle, updateLiving, useKept } from "../store/kept";
+import type { Personal } from "../engine/ai";
+import type { Theme, Verse } from "../data/verses";
 import { livingFor } from "../data/living";
 import Living from "./Living";
 
-type Props = { verse: Verse; theme?: string; first?: boolean };
+type Props = {
+  verse: Verse;
+  theme?: string;
+  first?: boolean;
+  /** Set when the passage came from Claude's reading, so its application can be written for it. */
+  personalize?: { situation: string; feelings: Theme[] };
+};
 
 /**
  * A passage set the way a centre-column reference Bible sets one: the citation
@@ -16,18 +23,29 @@ type Props = { verse: Verse; theme?: string; first?: boolean };
  * glosses underneath in a smaller face so ancient text and modern explanation
  * never get mistaken for one another.
  */
-function PassageCard({ verse, theme, first }: Props) {
+function PassageCard({ verse, theme, first, personalize }: Props) {
   const c = usePalette();
   const kept = useKept();
   const isKept = kept.some((k) => k.ref === verse.ref);
   const wide = useWindowDimensions().width >= 700;
   const own = livingFor(verse.ref);
+  const [personal, setPersonal] = useState<Personal | null>(null);
+
+  // Only a passage kept from this card takes on the words written here. One
+  // kept from an earlier reading keeps the words written for that reading.
+  const keptHere = useRef(false);
+
+  const onPersonal = (p: Personal) => {
+    setPersonal(p);
+    if (keptHere.current && isKeptNow(verse.ref)) updateLiving(verse.ref, p);
+  };
 
   const onKeep = () => {
     Haptics.impactAsync(
       isKept ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium
     ).catch(() => {});
-    toggle(verse);
+    keptHere.current = !isKept;
+    toggle({ ...verse, apply: personal?.apply ?? verse.apply, reflect: personal?.reflect ?? verse.reflect });
   };
 
   return (
@@ -80,6 +98,8 @@ function PassageCard({ verse, theme, first }: Props) {
           setting={verse.setting || own?.setting}
           apply={verse.apply || own?.apply}
           reflect={verse.reflect || own?.reflect}
+          personalize={personalize ? { ...personalize, ref: verse.ref, why: verse.why } : undefined}
+          onPersonal={onPersonal}
         />
       </View>
     </View>

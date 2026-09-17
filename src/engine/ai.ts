@@ -16,8 +16,12 @@ const TIMEOUT_MS = 45_000;
 
 type Wire = { opening?: unknown; passages?: Array<Record<string, unknown>>; error?: unknown };
 
+// Also decodes \u2014-style escapes, which Claude occasionally doubles in a
+// structured reply. The server does this too; this covers an older deployment.
 function str(v: unknown): string {
-  return typeof v === "string" ? v.trim() : "";
+  return typeof v === "string"
+    ? v.trim().replace(/\\u([0-9a-fA-F]{4})/g, (_, h: string) => String.fromCharCode(parseInt(h, 16)))
+    : "";
 }
 
 export class ReadingError extends Error {}
@@ -58,9 +62,6 @@ export async function closerReading(text: string, feelings: Theme[]): Promise<Re
       plain: str(p.plain),
       why: str(p.why),
       themes: (Array.isArray(p.themes) ? p.themes : []) as Theme[],
-      setting: str(p.setting) || undefined,
-      apply: str(p.apply) || undefined,
-      reflect: str(p.reflect) || undefined,
       score: 0,
     }))
     .filter((p) => p.ref && p.text);
@@ -73,4 +74,43 @@ export async function closerReading(text: string, feelings: Theme[]): Promise<Re
     passages,
     source: "reading",
   };
+}
+
+export type Personal = { apply: string; reflect: string };
+
+/**
+ * "How to live this" for one passage, written for the situation. Only asked for
+ * when someone opens it. The caller keeps showing the general version until this
+ * resolves, and if it throws.
+ */
+export async function personalLiving(
+  situation: string,
+  feelings: Theme[],
+  ref: string,
+  why: string
+): Promise<Personal> {
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(`${ENDPOINT.replace(/\/+$/, "")}/living`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: situation, feelings, ref, why }),
+      signal: abort.signal,
+    });
+  } catch {
+    throw new ReadingError(abort.signal.aborted ? "That took too long." : "Could not reach the reading service.");
+  } finally {
+    clearTimeout(timer);
+  }
+
+  const data = (await res.json().catch(() => ({}))) as { apply?: unknown; reflect?: unknown; error?: unknown };
+  if (!res.ok) throw new ReadingError(str(data.error) || `That failed (${res.status}).`);
+
+  const apply = str(data.apply);
+  const reflect = str(data.reflect);
+  if (!apply || !reflect) throw new ReadingError("It came back empty.");
+  return { apply, reflect };
 }

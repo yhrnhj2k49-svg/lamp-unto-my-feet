@@ -1,21 +1,28 @@
 // The reading server for Lamp Unto My Feet.
 //
-// Holds the Anthropic API key so the app never has to. The app posts what
-// someone wrote; this asks Claude to choose the passages that meet it and to
-// say why, in that person's terms.
+// Holds the Anthropic API key so the app never has to. Two routes:
+//
+//   POST /         what someone wrote  ->  the four passages that meet it
+//   POST /living   one of those passages  ->  how to live it, in that situation
+//
+// "How to live it" is only written when someone taps for it, so the reading
+// itself stays quick and nobody pays for application text they never open.
 //
 // Deploy:  npx wrangler secret put ANTHROPIC_API_KEY  &&  npx wrangler deploy
-// Local:   cp .dev.vars.example .dev.vars, add your key, npx wrangler dev
+// Local:   put the key in .dev.vars, then npm run dev:node
 
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
-import { CORPUS, CORPUS_SIZE } from "./corpus";
+import { PASSAGES } from "./corpus";
+import { cleanStrings } from "./text";
 
 export interface Env {
   ANTHROPIC_API_KEY: string;
-  /** low | medium | high | xhigh | max. Anything else falls back to medium. */
+  /** Effort for readings: low | medium | high | xhigh | max. Defaults to medium. */
   READING_EFFORT?: string;
+  /** Effort for "how to live it". Same values, same default. */
+  LIVING_EFFORT?: string;
 }
 
 const EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
@@ -24,8 +31,16 @@ const effortFrom = (value?: string): Effort =>
   (EFFORTS as readonly string[]).includes(value ?? "") ? (value as Effort) : "medium";
 
 const MAX_INPUT = 2000;
-const RATE_LIMIT = 20; // requests per IP per window
 const WINDOW_MS = 60 * 60 * 1000;
+// Per IP, per hour. A reading can be followed by a tap on each of its passages.
+const LIMITS = { reading: 20, living: 80 } as const;
+type Route = keyof typeof LIMITS;
+
+// The concordance as the reading prompt shows it, and as /living looks it up.
+const CORPUS = PASSAGES.map((p) => `${p.ref} | ${p.text}`).join("\n");
+const BY_REF = new Map(PASSAGES.map((p) => [p.ref, p]));
+
+/* ---------- schemas ---------- */
 
 const Passage = z.object({
   ref: z.string().describe("Book chapter:verse, e.g. Psalm 34:18"),
@@ -33,8 +48,6 @@ const Passage = z.object({
   plain: z.string().describe("One sentence of modern English saying what it says"),
   why: z.string().describe("One or two sentences on why it meets THIS situation"),
   themes: z.array(z.string()).describe("One or two lowercase words, e.g. grief"),
-  apply: z.string().describe("What this passage asks of them, concretely, in their situation"),
-  reflect: z.string().describe("One open question to sit with, ending in a question mark"),
 });
 
 const ReadingSchema = z.object({
@@ -42,7 +55,14 @@ const ReadingSchema = z.object({
   passages: z.array(Passage).describe("Exactly four passages"),
 });
 
-const SYSTEM = `You are a scripture concordance for someone who has just written down what they are going through. You choose the passages that meet it, and you say why in their terms.
+const LivingSchema = z.object({
+  apply: z.string().describe("What this passage asks of them, concretely, in their situation"),
+  reflect: z.string().describe("One open question to sit with, ending in a question mark"),
+});
+
+/* ---------- prompts ---------- */
+
+const READING_SYSTEM = `You are a scripture concordance for someone who has just written down what they are going through. You choose the passages that meet it, and you say why in their terms.
 
 CHOOSING
 - Choose exactly four passages.
@@ -60,13 +80,18 @@ WRITING
 - Never invent a citation. Never blend two passages into one quotation.
 - Do not tell them what God is doing in their life. Set out the passage and let it speak.
 
-HOW TO LIVE IT
-For each passage, also help them take it into their life. Each concordance line ends with the passage's setting, who wrote or spoke it, to whom and why. Use it to understand the passage, but do not write a setting yourself: the app already shows it.
-- "apply": one or two sentences on what this passage asks of them today, in the situation they described. Concrete and doable. Sometimes the honest application is permission, to rest, to grieve, not to fix it yet, rather than a task. Never a list of religious duties and never a rebuke. Do not repeat "why": "why" says how the passage fits, "apply" says what to do with it.
-- "reflect": one open question to sit with, ending in a question mark. Not rhetorical, not steering toward a right answer, never guilt-inducing.
-
-CONCORDANCE (${CORPUS_SIZE} passages, KJV). Each line is: reference | text | setting
+CONCORDANCE (${PASSAGES.length} passages, KJV)
 ${CORPUS}`;
+
+const LIVING_SYSTEM = `You help someone take one passage of scripture into their own life. They have written down what they are going through, and this passage was chosen for them.
+
+Write two things:
+- "apply": one or two sentences on what this passage asks of them today, in the situation they described. Concrete and doable. Sometimes the honest application is permission, to rest, to grieve, not to fix it yet, rather than a task. Never a list of religious duties and never a rebuke. Do not restate why the passage was chosen; say what to do with it.
+- "reflect": one open question for them to sit with, ending in a question mark. Not rhetorical, not steering toward a right answer, never guilt-inducing.
+
+Address the person as "you". Never assume their gender, age or circumstances beyond what they wrote. Do not tell them what God is doing in their life.`;
+
+/* ---------- plumbing ---------- */
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -85,15 +110,110 @@ const json = (body: unknown, status = 200) =>
 // Limiting binding in front before you advertise the app anywhere.
 const hits = new Map<string, { n: number; resetAt: number }>();
 
-function overLimit(ip: string): boolean {
+function overLimit(key: string, cap: number): boolean {
   const now = Date.now();
-  const cur = hits.get(ip);
+  const cur = hits.get(key);
   if (!cur || now > cur.resetAt) {
-    hits.set(ip, { n: 1, resetAt: now + WINDOW_MS });
+    hits.set(key, { n: 1, resetAt: now + WINDOW_MS });
     return false;
   }
   cur.n += 1;
-  return cur.n > RATE_LIMIT;
+  return cur.n > cap;
+}
+
+type Input = Record<string, unknown>;
+
+const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+const list = (v: unknown) =>
+  Array.isArray(v) ? v.filter((x): x is string => typeof x === "string").slice(0, 20) : [];
+
+const situation = (text: string, feelings: string[]) =>
+  `Here is what they wrote:\n\n${text || "(nothing written)"}\n\nThey also said it feels: ${
+    feelings.length ? feelings.join(", ") : "(nothing selected)"
+  }`;
+
+function failure(error: unknown): Response {
+  if (error instanceof Anthropic.AuthenticationError) {
+    console.error("ANTHROPIC_API_KEY is missing or invalid");
+    return json({ error: "The reading service is not configured." }, 500);
+  }
+  if (error instanceof Anthropic.RateLimitError) {
+    return json({ error: "Busy right now. Try again in a moment." }, 429);
+  }
+  if (error instanceof Anthropic.APIError) {
+    console.error(`Anthropic API error ${error.status}: ${error.message}`);
+    return json({ error: "That could not be completed." }, 502);
+  }
+  console.error(error);
+  return json({ error: "Something went wrong." }, 500);
+}
+
+/* ---------- routes ---------- */
+
+async function reading(input: Input, env: Env, client: Anthropic): Promise<Response> {
+  const text = str(input.text, MAX_INPUT);
+  const feelings = list(input.feelings);
+  if (!text && feelings.length === 0) return json({ error: "Nothing to read" }, 400);
+
+  try {
+    const response = await client.messages.parse({
+      model: "claude-opus-5",
+      max_tokens: 16000,
+      thinking: { type: "adaptive" },
+      // Defaults to medium: over four real readings it averaged 15s against
+      // 20s at high, with every quote still verbatim and 13 of 16 passages the same.
+      output_config: { effort: effortFrom(env.READING_EFFORT), format: zodOutputFormat(ReadingSchema) },
+      // The concordance is the stable prefix; the situation below it is what varies.
+      system: [{ type: "text", text: READING_SYSTEM, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: situation(text, feelings) }],
+    });
+
+    if (response.stop_reason === "refusal") return json({ error: "That could not be read." }, 422);
+    const parsed = response.parsed_output;
+    if (!parsed || parsed.passages.length === 0) return json({ error: "The reading came back empty." }, 502);
+    return json(cleanStrings(parsed));
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+async function living(input: Input, env: Env, client: Anthropic): Promise<Response> {
+  const text = str(input.text, MAX_INPUT);
+  const feelings = list(input.feelings);
+  const why = str(input.why, 800);
+
+  // Only passages from the concordance, and only its own copy of them, so the
+  // one thing a caller can write freely is their situation, as with a reading.
+  const passage = BY_REF.get(str(input.ref, 80));
+  if (!passage) return json({ error: "That passage is not in the concordance." }, 404);
+  if (!text && feelings.length === 0) return json({ error: "Nothing to read" }, 400);
+
+  const about = [
+    situation(text, feelings),
+    `The passage: ${passage.ref}\n${passage.text}`,
+    `Its setting: ${passage.setting}`,
+    why ? `Why it was chosen for them: ${why}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  try {
+    const response = await client.messages.parse({
+      model: "claude-opus-5",
+      max_tokens: 16000,
+      thinking: { type: "adaptive" },
+      output_config: { effort: effortFrom(env.LIVING_EFFORT), format: zodOutputFormat(LivingSchema) },
+      system: LIVING_SYSTEM,
+      messages: [{ role: "user", content: about }],
+    });
+
+    if (response.stop_reason === "refusal") return json({ error: "That could not be written." }, 422);
+    const parsed = response.parsed_output;
+    if (!parsed?.apply || !parsed?.reflect) return json({ error: "It came back empty." }, 502);
+    return json(cleanStrings(parsed));
+  } catch (error) {
+    return failure(error);
+  }
 }
 
 export default {
@@ -101,21 +221,23 @@ export default {
     if (req.method === "OPTIONS") return new Response(null, { headers: cors });
     if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
-    const ip = req.headers.get("CF-Connecting-IP") ?? "local";
-    if (overLimit(ip)) return json({ error: "Too many readings. Try again later." }, 429);
+    const route: Route = new URL(req.url).pathname.replace(/\/+$/, "").endsWith("/living")
+      ? "living"
+      : "reading";
 
-    let text = "";
-    let feelings: string[] = [];
+    const ip = req.headers.get("CF-Connecting-IP") ?? "local";
+    if (overLimit(`${ip}:${route}`, LIMITS[route])) {
+      return json({ error: "Too many requests. Try again later." }, 429);
+    }
+
+    let input: Input;
     try {
-      const body = (await req.json()) as { text?: unknown; feelings?: unknown };
-      text = typeof body.text === "string" ? body.text.trim() : "";
-      feelings = Array.isArray(body.feelings) ? body.feelings.filter((f) => typeof f === "string") : [];
+      const parsed: unknown = await req.json();
+      if (!parsed || typeof parsed !== "object") throw new Error();
+      input = parsed as Input;
     } catch {
       return json({ error: "Expected JSON" }, 400);
     }
-
-    if (!text && feelings.length === 0) return json({ error: "Nothing to read" }, 400);
-    if (text.length > MAX_INPUT) text = text.slice(0, MAX_INPUT);
 
     // Constructing the client without a key throws, which would surface as a
     // 500 with no explanation in the logs. Say what is actually wrong.
@@ -125,53 +247,6 @@ export default {
     }
 
     const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
-
-    try {
-      const response = await client.messages.parse({
-        model: "claude-opus-5",
-        max_tokens: 16000,
-        thinking: { type: "adaptive" },
-        // Quality/latency/cost knob, set with READING_EFFORT so it can be tuned
-        // on the deployed worker without a code change. Defaults to medium: over
-        // four real readings it averaged 15s against 20s at high, with every
-        // quote still verbatim and 13 of 16 passages the same.
-        output_config: { effort: effortFrom(env.READING_EFFORT), format: zodOutputFormat(ReadingSchema) },
-        // The corpus is the stable prefix; the situation below it is what varies.
-        system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
-        messages: [
-          {
-            role: "user",
-            content: `Here is what they wrote:\n\n${text || "(nothing written)"}\n\nThey also said it feels: ${
-              feelings.length ? feelings.join(", ") : "(nothing selected)"
-            }`,
-          },
-        ],
-      });
-
-      if (response.stop_reason === "refusal") {
-        return json({ error: "That could not be read." }, 422);
-      }
-
-      const parsed = response.parsed_output;
-      if (!parsed || parsed.passages.length === 0) {
-        return json({ error: "The reading came back empty." }, 502);
-      }
-
-      return json(parsed);
-    } catch (error) {
-      if (error instanceof Anthropic.AuthenticationError) {
-        console.error("ANTHROPIC_API_KEY is missing or invalid");
-        return json({ error: "The reading service is not configured." }, 500);
-      }
-      if (error instanceof Anthropic.RateLimitError) {
-        return json({ error: "Busy right now. Try again in a moment." }, 429);
-      }
-      if (error instanceof Anthropic.APIError) {
-        console.error(`Anthropic API error ${error.status}: ${error.message}`);
-        return json({ error: "The reading could not be completed." }, 502);
-      }
-      console.error(error);
-      return json({ error: "Something went wrong." }, 500);
-    }
+    return route === "living" ? living(input, env, client) : reading(input, env, client);
   },
 };

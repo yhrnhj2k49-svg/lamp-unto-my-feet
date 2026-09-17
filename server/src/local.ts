@@ -21,7 +21,11 @@ function keyFromDevVars(): string {
 
 const PORT = Number(process.env.PORT ?? 8787);
 const key = process.env.ANTHROPIC_API_KEY || keyFromDevVars();
-const env: Env = { ANTHROPIC_API_KEY: key, READING_EFFORT: process.env.READING_EFFORT };
+const env: Env = {
+  ANTHROPIC_API_KEY: key,
+  READING_EFFORT: process.env.READING_EFFORT,
+  LIVING_EFFORT: process.env.LIVING_EFFORT,
+};
 
 // A single key, checked by shape only. The value is never printed.
 const oneKey = /^sk-ant-[A-Za-z0-9_-]{80,160}$/.test(key);

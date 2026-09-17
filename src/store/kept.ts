@@ -57,6 +57,17 @@ export function keep(v: Verse) {
   void persist();
 }
 
+export const isKept = (ref: string) => items.some((i) => i.ref === ref);
+
+/** Give a kept passage the application written for the reading it was kept from. */
+export function updateLiving(ref: string, p: { apply: string; reflect: string }) {
+  const i = items.findIndex((x) => x.ref === ref);
+  if (i < 0) return;
+  items[i] = { ...items[i], apply: p.apply, reflect: p.reflect };
+  emit();
+  void persist();
+}
+
 export function drop(ref: string) {
   items = items.filter((i) => i.ref !== ref);
   emit();

@@ -44,6 +44,7 @@ export default function ReadScreen() {
   const [busy, setBusy] = useState(false);
   const [fellBack, setFellBack] = useState("");
   const [answeredKey, setAnsweredKey] = useState("");
+  const [answeredFeelings, setAnsweredFeelings] = useState<Theme[]>([]);
 
   // Every search is numbered, and only the newest may update the screen. A
   // slow reading for an earlier search must never land on top of a later one.
@@ -89,6 +90,7 @@ export default function ReadScreen() {
     const id = ++latest.current;
     setAnswered(q);
     setAnsweredKey(key);
+    setAnsweredFeelings(picked);
     setFellBack("");
 
     // The phone's own match lands at once, so there is something to read
@@ -264,7 +266,17 @@ export default function ReadScreen() {
           </Text>
 
           {shown.passages.map((p, i) => (
-            <Passage key={p.ref} verse={p} theme={p.themes[0]} first={i === 0} />
+            <Passage
+              // A fresh card for each set of results, so nothing written for one
+              // search, or for the phone's matches, carries over into the next.
+              key={`${answeredKey}|${shown.source}|${p.ref}`}
+              verse={p}
+              theme={p.themes[0]}
+              first={i === 0}
+              personalize={
+                shown.source === "reading" ? { situation: answered, feelings: answeredFeelings } : undefined
+              }
+            />
           ))}
         </Animated.View>
 
