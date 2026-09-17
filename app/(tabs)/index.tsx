@@ -21,6 +21,9 @@ import { aiAvailable, closerReading, ReadingError } from "../../src/engine/ai";
 import type { Theme } from "../../src/data/verses";
 import Passage from "../../src/components/Passage";
 import PageGlow from "../../src/components/PageGlow";
+import ConsentSheet from "../../src/components/ConsentSheet";
+import ReportSheet from "../../src/components/ReportSheet";
+import { setConsent, useConsent } from "../../src/store/consent";
 import { font, label, space } from "../../src/theme";
 import { usePalette } from "../../src/usePalette";
 
@@ -45,6 +48,10 @@ export default function ReadScreen() {
   const [fellBack, setFellBack] = useState("");
   const [answeredKey, setAnsweredKey] = useState("");
   const [answeredFeelings, setAnsweredFeelings] = useState<Theme[]>([]);
+  const [asking, setAsking] = useState<{ q: string; picked: Theme[]; id: number } | null>(null);
+  const [reporting, setReporting] = useState(false);
+  const { value: consent } = useConsent();
+  const aiOn = aiAvailable && consent === "granted";
 
   // Every search is numbered, and only the newest may update the screen. A
   // slow reading for an earlier search must never land on top of a later one.
@@ -98,10 +105,32 @@ export default function ReadScreen() {
     setReading(findPassages(q, picked));
     requestAnimationFrame(() => scroller.current?.scrollTo({ y: 320, animated: true }));
 
-    if (!aiAvailable) return;
+    if (!aiAvailable || consent === "declined") return;
 
-    // Meanwhile Claude reads it more closely and replaces the match when done.
-    // If that fails, the phone's match simply stays.
+    // Nothing is sent until the person has said yes. The phone's match is
+    // already on screen while they decide.
+    if (consent !== "granted") {
+      setAsking({ q, picked, id });
+      return;
+    }
+    await readWithClaude(q, picked, id);
+  };
+
+  const allow = () => {
+    const pending = asking;
+    setAsking(null);
+    void setConsent("granted");
+    if (pending && pending.id === latest.current) void readWithClaude(pending.q, pending.picked, pending.id);
+  };
+
+  const decline = () => {
+    setAsking(null);
+    void setConsent("declined");
+  };
+
+  // Claude reads it more closely and replaces the phone's match when done. If
+  // that fails, the phone's match simply stays.
+  const readWithClaude = async (q: string, picked: Theme[], id: number) => {
     setBusy(true);
     try {
       const closer = await closerReading(q, picked);
@@ -274,19 +303,48 @@ export default function ReadScreen() {
               theme={p.themes[0]}
               first={i === 0}
               personalize={
-                shown.source === "reading" ? { situation: answered, feelings: answeredFeelings } : undefined
+                shown.source === "reading" && aiOn
+                  ? { situation: answered, feelings: answeredFeelings }
+                  : undefined
               }
             />
           ))}
         </Animated.View>
 
+        {shown.source === "reading" && !busy ? (
+          <Pressable
+            onPress={() => setReporting(true)}
+            accessibilityRole="button"
+            hitSlop={8}
+            style={s.reportRow}
+          >
+            <Text style={[s.report, { color: c.ink3, borderBottomColor: c.rule }]}>Report this reading</Text>
+          </Pressable>
+        ) : null}
+
         <Text style={[s.foot, { color: c.ink3, borderTopColor: c.rule }]}>
           King James Version, which is in the public domain.{" "}
-          {aiAvailable
-            ? "What you write is sent to the reading service so it can be read, and is not stored. If it cannot be reached, matching falls back to this phone."
-            : "Matching happens on this phone — nothing you write is sent anywhere."}
+          {aiOn
+            ? "What you write is sent to Claude so it can choose passages for you. This app keeps no copy. If Claude cannot be reached, passages are matched on this phone."
+            : "Passages are matched on this phone. Nothing you write is sent anywhere."}
         </Text>
       </ScrollView>
+
+      <ConsentSheet
+        visible={asking !== null}
+        onAllow={allow}
+        onDecline={decline}
+        onDismiss={() => setAsking(null)}
+      />
+      <ReportSheet
+        visible={reporting}
+        onClose={() => setReporting(false)}
+        kind="reading"
+        content={{
+          opening: shown.opening,
+          passages: shown.passages.map((p) => ({ ref: p.ref, plain: p.plain, why: p.why })),
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -354,6 +412,8 @@ const s = StyleSheet.create({
     borderLeftWidth: 2,
     paddingLeft: 14,
   },
+  reportRow: { alignSelf: "flex-start", marginTop: space.lg },
+  report: { fontFamily: font.ui, fontSize: 12.5, borderBottomWidth: 1, paddingBottom: 1 },
   foot: {
     fontFamily: font.ui,
     fontSize: 12,

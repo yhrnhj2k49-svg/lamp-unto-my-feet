@@ -3,6 +3,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { VERSES } from "../../src/data/verses";
 import { CRISIS_NOTE } from "../../src/engine/safety";
 import { aiAvailable } from "../../src/engine/ai";
+import { setConsent, useConsent } from "../../src/store/consent";
+import { PRIVACY_URL, SUPPORT_URL } from "../../src/links";
 import { font, label, space } from "../../src/theme";
 import { usePalette } from "../../src/usePalette";
 import PageGlow from "../../src/components/PageGlow";
@@ -20,6 +22,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default function AboutScreen() {
   const c = usePalette();
   const insets = useSafeAreaInsets();
+  const { value: consent } = useConsent();
+  const aiOn = aiAvailable && consent === "granted";
+  const A = ({ children, onPress }: { children: React.ReactNode; onPress: () => void }) => (
+    <Pressable onPress={onPress} accessibilityRole="button" hitSlop={8} style={{ alignSelf: "flex-start" }}>
+      <Text style={[s.link, { color: c.indigo, borderBottomColor: c.indigo }]}>{children}</Text>
+    </Pressable>
+  );
   const P = ({ children }: { children: React.ReactNode }) => (
     <Text style={[s.p, { color: c.ink2 }]}>{children}</Text>
   );
@@ -44,8 +53,25 @@ export default function AboutScreen() {
         of each, so nothing turns on knowing what a word meant in 1611.
       </Text>
 
+      {aiAvailable ? (
+        <Section title="Claude's reading">
+          <P>
+            {consent === "granted"
+              ? "On. What you write is sent to Claude, an AI made by Anthropic, to choose passages for you and to write how to live them."
+              : consent === "declined"
+                ? "Off. Passages are matched on this phone and nothing you write is sent."
+                : "Not decided yet. You will be asked the first time you search, before anything is sent."}
+          </P>
+          {consent === "granted" ? (
+            <A onPress={() => void setConsent("declined")}>Keep everything on this phone instead</A>
+          ) : (
+            <A onPress={() => void setConsent("granted")}>Let Claude read what I write</A>
+          )}
+        </Section>
+      ) : null}
+
       <Section title="How the passages are chosen">
-        {aiAvailable ? (
+        {aiOn ? (
           <>
             <P>
               What you write is read by Claude, which chooses four passages that meet your
@@ -78,26 +104,29 @@ export default function AboutScreen() {
       </Section>
 
       <Section title="What leaves your phone">
-        {aiAvailable ? (
+        {aiOn ? (
           <>
             <P>
-              When a reading is made, what you wrote is sent to the reading service so it
-              can be read, and on to Anthropic to do the reading. Neither the app nor the
-              service keeps it — there is no account, and no history is stored anywhere.
+              What you write, and any feelings you pick, is sent to the reading service and on
+              to Anthropic so Claude can choose passages. Opening "How to live this" sends it
+              again, with that passage. Neither this app nor its reading service keeps a copy.
             </P>
             <P>
-              Passages you keep are stored only on this phone, which also means they go if
-              you delete the app. When the app falls back to matching on the device,
-              nothing leaves the phone at all.
+              If you report something Claude wrote, that writing and the reason you choose are
+              kept for review for up to 90 days. What you wrote is not included.
             </P>
           </>
         ) : (
           <P>
-            Nothing. There is no account, no server and no analytics. The matching runs on
-            the device, and passages you keep are stored only on it — which also means they
-            go if you delete the app.
+            Nothing you write. There is no account and no analytics, and passages are matched
+            on this phone.
           </P>
         )}
+        <P>
+          Passages you keep are stored only on this phone, which also means they go if you
+          delete the app. Bible translations download from GitHub, like any web page.
+        </P>
+        <A onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})}>Read the privacy policy</A>
       </Section>
 
       <Section title="The text">
@@ -125,7 +154,14 @@ export default function AboutScreen() {
 
       <Text style={[s.colophon, { color: c.ink3, borderTopColor: c.rule }]}>
         Set in Gentium Book Plus, drawn by SIL for scripture typesetting, with Bodoni
-        Moda and Archivo. Version 1.0.0.
+        Moda and Archivo. Version 1.0.0.{"\n"}
+        <Text
+          accessibilityRole="link"
+          onPress={() => Linking.openURL(SUPPORT_URL).catch(() => {})}
+          style={{ textDecorationLine: "underline" }}
+        >
+          Help and support
+        </Text>
       </Text>
     </ScrollView>
     </View>

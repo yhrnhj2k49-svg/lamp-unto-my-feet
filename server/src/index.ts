@@ -4,6 +4,7 @@
 //
 //   POST /         what someone wrote  ->  the four passages that meet it
 //   POST /living   one of those passages  ->  how to live it, in that situation
+//   POST /report   something Claude wrote was wrong or harmful  ->  kept for review
 //
 // "How to live it" is only written when someone taps for it, so the reading
 // itself stays quick and nobody pays for application text they never open.
@@ -23,6 +24,12 @@ export interface Env {
   READING_EFFORT?: string;
   /** Effort for "how to live it". Same values, same default. */
   LIVING_EFFORT?: string;
+  /** Cloudflare rate limiters, per minute per IP. Absent when running locally. */
+  READING_LIMIT?: RateLimit;
+  LIVING_LIMIT?: RateLimit;
+  REPORT_LIMIT?: RateLimit;
+  /** Where reports are kept. Absent locally, where they go to the log instead. */
+  REPORTS?: KVNamespace;
 }
 
 const EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
@@ -33,7 +40,7 @@ const effortFrom = (value?: string): Effort =>
 const MAX_INPUT = 2000;
 const WINDOW_MS = 60 * 60 * 1000;
 // Per IP, per hour. A reading can be followed by a tap on each of its passages.
-const LIMITS = { reading: 20, living: 80 } as const;
+const LIMITS = { reading: 20, living: 80, report: 20 } as const;
 type Route = keyof typeof LIMITS;
 
 // The concordance as the reading prompt shows it, and as /living looks it up.
@@ -105,9 +112,10 @@ const json = (body: unknown, status = 200) =>
     headers: { "Content-Type": "application/json", ...cors },
   });
 
-// Coarse per-IP limiting. Isolates are per-location and get recycled, so this
-// blunts casual abuse rather than preventing it — put Cloudflare's Rate
-// Limiting binding in front before you advertise the app anywhere.
+// Two layers of per-IP limiting. Cloudflare's rate limiters (wrangler.toml) stop
+// bursts within a minute; they count per data centre and are approximate by
+// design. This in-memory hourly count is a rough second cap, and the only one
+// when running locally. Isolates get recycled, so on its own it resets.
 const hits = new Map<string, { n: number; resetAt: number }>();
 
 function overLimit(key: string, cap: number): boolean {
@@ -119,6 +127,12 @@ function overLimit(key: string, cap: number): boolean {
   }
   cur.n += 1;
   return cur.n > cap;
+}
+
+async function limited(env: Env, route: Route, ip: string): Promise<boolean> {
+  const binding = { reading: env.READING_LIMIT, living: env.LIVING_LIMIT, report: env.REPORT_LIMIT }[route];
+  if (binding && !(await binding.limit({ key: ip })).success) return true;
+  return overLimit(`${ip}:${route}`, LIMITS[route]);
 }
 
 type Input = Record<string, unknown>;
@@ -216,17 +230,48 @@ async function living(input: Input, env: Env, client: Anthropic): Promise<Respon
   }
 }
 
+const REASONS = new Set(["harmful", "misleading", "misquote", "other"]);
+const REPORT_DAYS = 90;
+
+// Google Play requires a way to report AI-generated content from inside the app.
+// The app sends only Claude's words and a reason, never what the person wrote.
+async function report(input: Input, env: Env): Promise<Response> {
+  const kind = input.kind === "reading" || input.kind === "living" ? input.kind : null;
+  const reason = str(input.reason, 20);
+  if (!kind || !REASONS.has(reason)) return json({ error: "That report is missing its reason." }, 400);
+
+  const record = {
+    kind,
+    reason,
+    content: JSON.stringify(input.content ?? null).slice(0, 8000),
+    at: new Date().toISOString(),
+  };
+
+  try {
+    if (env.REPORTS) {
+      await env.REPORTS.put(`report:${record.at}:${crypto.randomUUID()}`, JSON.stringify(record), {
+        expirationTtl: REPORT_DAYS * 24 * 60 * 60,
+      });
+    } else {
+      console.log(`report ${JSON.stringify(record)}`);
+    }
+    return json({ ok: true });
+  } catch (error) {
+    console.error(error);
+    return json({ error: "The report did not save." }, 500);
+  }
+}
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     if (req.method === "OPTIONS") return new Response(null, { headers: cors });
     if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
-    const route: Route = new URL(req.url).pathname.replace(/\/+$/, "").endsWith("/living")
-      ? "living"
-      : "reading";
+    const path = new URL(req.url).pathname.replace(/\/+$/, "");
+    const route: Route = path.endsWith("/living") ? "living" : path.endsWith("/report") ? "report" : "reading";
 
     const ip = req.headers.get("CF-Connecting-IP") ?? "local";
-    if (overLimit(`${ip}:${route}`, LIMITS[route])) {
+    if (await limited(env, route, ip)) {
       return json({ error: "Too many requests. Try again later." }, 429);
     }
 
@@ -238,6 +283,9 @@ export default {
     } catch {
       return json({ error: "Expected JSON" }, 400);
     }
+
+    // Reports never reach Claude, so they need no key.
+    if (route === "report") return report(input, env);
 
     // Constructing the client without a key throws, which would surface as a
     // 500 with no explanation in the logs. Say what is actually wrong.

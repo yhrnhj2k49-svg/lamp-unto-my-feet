@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import * as Haptics from "expo-haptics";
 import { personalLiving, type Personal } from "../engine/ai";
+import ReportSheet from "./ReportSheet";
 import type { Theme } from "../data/verses";
 import { font, label, space } from "../theme";
 import { usePalette } from "../usePalette";
@@ -28,6 +29,7 @@ export default function Living({ setting, apply, reflect, personalize, onPersona
   const [open, setOpen] = useState(false);
   const [personal, setPersonal] = useState<Personal | null>(null);
   const [status, setStatus] = useState<"idle" | "writing" | "failed">("idle");
+  const [reporting, setReporting] = useState(false);
 
   // A reply that lands after this card has gone must not write anywhere.
   const alive = useRef(true);
@@ -93,7 +95,16 @@ export default function Living({ setting, apply, reflect, personalize, onPersona
                 </Text>
               </View>
             ) : personal ? (
-              <Text style={[s.captionText, { color: c.ink3 }]}>Written for what you described.</Text>
+              <Text style={[s.captionText, { color: c.ink3 }]}>
+                Written for what you described.{"   "}
+                <Text
+                  onPress={() => setReporting(true)}
+                  accessibilityRole="button"
+                  style={{ textDecorationLine: "underline" }}
+                >
+                  Report
+                </Text>
+              </Text>
             ) : status === "failed" ? (
               <Text style={[s.captionText, { color: c.ink3 }]}>
                 Could not reach Claude, so this is the general version. Close and reopen to try again.
@@ -120,6 +131,15 @@ export default function Living({ setting, apply, reflect, personalize, onPersona
             </View>
           ) : null}
         </View>
+      ) : null}
+
+      {personal ? (
+        <ReportSheet
+          visible={reporting}
+          onClose={() => setReporting(false)}
+          kind="living"
+          content={{ ref: personalize?.ref, apply: personal.apply, reflect: personal.reflect }}
+        />
       ) : null}
     </View>
   );

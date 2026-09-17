@@ -21,6 +21,7 @@ import {
 } from "@expo-google-fonts/archivo";
 import { hydrate } from "../src/store/kept";
 import { hydrateBibles } from "../src/bible/store";
+import { hydrateConsent } from "../src/store/consent";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -42,6 +43,7 @@ export default function RootLayout() {
   useEffect(() => {
     void hydrate();
     void hydrateBibles();
+    void hydrateConsent();
   }, []);
 
   useEffect(() => {

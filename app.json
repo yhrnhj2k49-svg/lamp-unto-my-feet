@@ -18,7 +18,8 @@
     "android": {
       "package": "com.lampuntomyfeet.app",
       "adaptiveIcon": {
-        "backgroundColor": "#EEEDE7",
+        "backgroundColor": "#131527",
+        "backgroundImage": "./assets/android-icon-background.png",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
@@ -35,10 +36,13 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#EEEDE7",
-          "dark": { "backgroundColor": "#14161C" },
+          "backgroundColor": "#FCFAF5",
           "image": "./assets/splash-icon.png",
-          "imageWidth": 160
+          "imageWidth": 160,
+          "dark": {
+            "backgroundColor": "#131527",
+            "image": "./assets/splash-icon-dark.png"
+          }
         }
       ]
     ],

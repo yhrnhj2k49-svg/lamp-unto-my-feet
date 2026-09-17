@@ -5,3 +5,41 @@ compatibility_flags = ["nodejs_compat"]
 
 # Set the key with:  npx wrangler secret put ANTHROPIC_API_KEY
 # Never put it in this file — wrangler.toml is committed.
+
+# Keep logs, so failures and reports can be looked into after the fact.
+[observability]
+enabled = true
+
+# Burst limits per IP per minute, enforced by Cloudflare. Counted per data
+# centre and approximate by design: they stop floods, not every excess. The
+# server keeps a rough hourly cap of its own as well.
+[[ratelimits]]
+name = "READING_LIMIT"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 3
+  period = 60
+
+[[ratelimits]]
+name = "LIVING_LIMIT"
+namespace_id = "1002"
+
+  [ratelimits.simple]
+  limit = 12
+  period = 60
+
+[[ratelimits]]
+name = "REPORT_LIMIT"
+namespace_id = "1003"
+
+  [ratelimits.simple]
+  limit = 5
+  period = 60
+
+# Reports of Claude's writing, kept 90 days for review. When deploying, create
+# the namespace, then uncomment this and paste in its id:
+#   npx wrangler kv namespace create REPORTS
+# [[kv_namespaces]]
+# binding = "REPORTS"
+# id = "paste-the-id-here"

@@ -114,3 +114,34 @@ export async function personalLiving(
   if (!apply || !reflect) throw new ReadingError("It came back empty.");
   return { apply, reflect };
 }
+
+export type ReportKind = "reading" | "living";
+
+/** Report something Claude wrote. Only Claude's words are sent, never the person's own. */
+export async function reportContent(
+  kind: ReportKind,
+  reason: string,
+  content: Record<string, unknown>
+): Promise<void> {
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), 20_000);
+
+  let res: Response;
+  try {
+    res = await fetch(`${ENDPOINT.replace(/\/+$/, "")}/report`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind, reason, content }),
+      signal: abort.signal,
+    });
+  } catch {
+    throw new ReadingError(abort.signal.aborted ? "That took too long." : "Could not reach the reading service.");
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: unknown };
+    throw new ReadingError(str(data.error) || `The report did not send (${res.status}).`);
+  }
+}
