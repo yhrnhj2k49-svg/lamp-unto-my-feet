@@ -24,6 +24,14 @@ export const TRANSLATIONS = [
   { id: "Webster", name: "Webster's Bible",           year: "1833", note: "Noah Webster's revision of the King James." },
 ];
 
+// The source spells numbered books with Roman numerals ("II Timothy") and calls
+// the last book "Revelation of John". Readers expect "2 Timothy" and
+// "Revelation", and so does Bible Gateway when chapters link out.
+function bookName(name) {
+  if (name === "Revelation of John") return "Revelation";
+  return name.replace(/^III /, "3 ").replace(/^II /, "2 ").replace(/^I /, "1 ");
+}
+
 const SRC = ".bible-src";
 const OUT = ".bible-dist";
 
@@ -49,7 +57,7 @@ for (const t of TRANSLATIONS) {
   // Strip the repeated keys: a book becomes a name plus chapters of verse
   // strings. Roughly halves the payload before gzip even runs.
   const books = src.books.map((b) => ({
-    n: b.name,
+    n: bookName(b.name),
     c: b.chapters.map((ch) => ch.verses.map((v) => v.text)),
   }));
 

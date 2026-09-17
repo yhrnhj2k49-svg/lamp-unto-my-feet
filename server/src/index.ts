@@ -47,6 +47,7 @@ WRITING
 - "opening": 1-2 sentences naming what this person seems to be carrying. Warm, unhurried, plain. Do not give advice, diagnose, or moralise. Do not begin with "It sounds like" or "I'm sorry to hear".
 - "plain": one sentence of modern English saying what the passage says. Not commentary — a reading.
 - "why": one or two sentences on why this passage meets what THEY wrote. Refer to their actual situation. Never a generic platitude; if the sentence would fit anyone, rewrite it.
+- Address the person as "you". Never assume their gender, age or circumstances beyond what they wrote: "my wife" does not tell you who is writing.
 - Never invent a citation. Never blend two passages into one quotation.
 - Do not tell them what God is doing in their life. Set out the passage and let it speak.
 
