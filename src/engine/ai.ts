@@ -58,6 +58,9 @@ export async function closerReading(text: string, feelings: Theme[]): Promise<Re
       plain: str(p.plain),
       why: str(p.why),
       themes: (Array.isArray(p.themes) ? p.themes : []) as Theme[],
+      setting: str(p.setting) || undefined,
+      apply: str(p.apply) || undefined,
+      reflect: str(p.reflect) || undefined,
       score: 0,
     }))
     .filter((p) => p.ref && p.text);

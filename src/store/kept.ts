@@ -3,8 +3,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSyncExternalStore } from "react";
 import type { Verse } from "../data/verses";
+import { livingFor } from "../data/living";
 
-export type Kept = Pick<Verse, "ref" | "text" | "plain" | "why"> & { keptAt: number };
+export type Kept = Pick<Verse, "ref" | "text" | "plain" | "why" | "setting" | "apply" | "reflect"> & {
+  keptAt: number;
+};
 
 const KEY = "lamp.kept.v1";
 
@@ -39,7 +42,17 @@ export async function hydrate() {
 
 export function keep(v: Verse) {
   if (items.some((i) => i.ref === v.ref)) return;
-  items.unshift({ ref: v.ref, text: v.text, plain: v.plain, why: v.why, keptAt: Date.now() });
+  const own = livingFor(v.ref);
+  items.unshift({
+    ref: v.ref,
+    text: v.text,
+    plain: v.plain,
+    why: v.why,
+    setting: v.setting || own?.setting,
+    apply: v.apply || own?.apply,
+    reflect: v.reflect || own?.reflect,
+    keptAt: Date.now(),
+  });
   emit();
   void persist();
 }

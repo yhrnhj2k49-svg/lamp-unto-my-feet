@@ -5,6 +5,8 @@ import { drop, useKept } from "../../src/store/kept";
 import { font, label, space } from "../../src/theme";
 import { usePalette } from "../../src/usePalette";
 import PageGlow from "../../src/components/PageGlow";
+import Living from "../../src/components/Living";
+import { livingFor } from "../../src/data/living";
 
 export default function KeptScreen() {
   const c = usePalette();
@@ -61,6 +63,11 @@ export default function KeptScreen() {
               <Text style={[label, { color: c.gilt }]}>In plain words  </Text>
               {k.plain}
             </Text>
+            <Living
+              setting={k.setting || livingFor(k.ref)?.setting}
+              apply={k.apply || livingFor(k.ref)?.apply}
+              reflect={k.reflect || livingFor(k.ref)?.reflect}
+            />
           </View>
         ))
       )}

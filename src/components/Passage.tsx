@@ -5,6 +5,8 @@ import { font, label, space } from "../theme";
 import { usePalette } from "../usePalette";
 import { toggle, useKept } from "../store/kept";
 import type { Verse } from "../data/verses";
+import { livingFor } from "../data/living";
+import Living from "./Living";
 
 type Props = { verse: Verse; theme?: string; first?: boolean };
 
@@ -19,6 +21,7 @@ function PassageCard({ verse, theme, first }: Props) {
   const kept = useKept();
   const isKept = kept.some((k) => k.ref === verse.ref);
   const wide = useWindowDimensions().width >= 700;
+  const own = livingFor(verse.ref);
 
   const onKeep = () => {
     Haptics.impactAsync(
@@ -72,6 +75,12 @@ function PassageCard({ verse, theme, first }: Props) {
             {verse.why}
           </Text>
         </View>
+
+        <Living
+          setting={verse.setting || own?.setting}
+          apply={verse.apply || own?.apply}
+          reflect={verse.reflect || own?.reflect}
+        />
       </View>
     </View>
   );

@@ -33,6 +33,8 @@ const Passage = z.object({
   plain: z.string().describe("One sentence of modern English saying what it says"),
   why: z.string().describe("One or two sentences on why it meets THIS situation"),
   themes: z.array(z.string()).describe("One or two lowercase words, e.g. grief"),
+  apply: z.string().describe("What this passage asks of them, concretely, in their situation"),
+  reflect: z.string().describe("One open question to sit with, ending in a question mark"),
 });
 
 const ReadingSchema = z.object({
@@ -58,7 +60,12 @@ WRITING
 - Never invent a citation. Never blend two passages into one quotation.
 - Do not tell them what God is doing in their life. Set out the passage and let it speak.
 
-CONCORDANCE (${CORPUS_SIZE} passages, KJV)
+HOW TO LIVE IT
+For each passage, also help them take it into their life. Each concordance line ends with the passage's setting, who wrote or spoke it, to whom and why. Use it to understand the passage, but do not write a setting yourself: the app already shows it.
+- "apply": one or two sentences on what this passage asks of them today, in the situation they described. Concrete and doable. Sometimes the honest application is permission, to rest, to grieve, not to fix it yet, rather than a task. Never a list of religious duties and never a rebuke. Do not repeat "why": "why" says how the passage fits, "apply" says what to do with it.
+- "reflect": one open question to sit with, ending in a question mark. Not rhetorical, not steering toward a right answer, never guilt-inducing.
+
+CONCORDANCE (${CORPUS_SIZE} passages, KJV). Each line is: reference | text | setting
 ${CORPUS}`;
 
 const cors = {

@@ -3,8 +3,9 @@
 //   npx tsx scripts/build-corpus.ts
 import { writeFileSync } from "node:fs";
 import { VERSES } from "../src/data/verses";
+import { LIVING } from "../src/data/living";
 
-const lines = VERSES.map((v) => `${v.ref} | ${v.text}`).join("\n");
+const lines = VERSES.map((v) => `${v.ref} | ${v.text} | ${LIVING[v.ref]?.setting ?? ""}`).join("\n");
 
 writeFileSync(
   "server/src/corpus.ts",

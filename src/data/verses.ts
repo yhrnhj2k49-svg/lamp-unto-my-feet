@@ -19,6 +19,10 @@ export type Verse = {
   plain: string;
   why: string;
   themes: Theme[];
+  /** How to live it. Corpus passages take these from living.ts; Claude writes its own. */
+  setting?: string;
+  apply?: string;
+  reflect?: string;
 };
 
 export const VERSES: Verse[] = [

@@ -44,6 +44,8 @@ single words, because "lost my job" and "lost my mum" share a word and nothing
 else; how you say you feel counts for more than what the situation is about. It
 runs with no network, and it is what answers when a reading cannot be made.
 
+**How to live it.** Every passage has a "How to live this" section: the setting (who wrote it, to whom, and what was happening), what it asks of you, and a question to sit with. Claude writes all three for the situation you describe; offline they come from `src/data/living.ts`, written for each of the 167 passages. Settings say "traditionally" wherever authorship is not certain.
+
 **Crisis detection.** If someone writes that they are in danger, helpline numbers
 appear above the passages — alongside them, never instead of them.
 
