@@ -21,7 +21,7 @@ function keyFromDevVars(): string {
 
 const PORT = Number(process.env.PORT ?? 8787);
 const key = process.env.ANTHROPIC_API_KEY || keyFromDevVars();
-const env: Env = { ANTHROPIC_API_KEY: key };
+const env: Env = { ANTHROPIC_API_KEY: key, READING_EFFORT: process.env.READING_EFFORT };
 
 // A single key, checked by shape only. The value is never printed.
 const oneKey = /^sk-ant-[A-Za-z0-9_-]{80,160}$/.test(key);
@@ -55,5 +55,5 @@ createServer(async (req, res) => {
   console.log(`reading server on http://localhost:${PORT}`);
   if (!key) console.log("no key: set ANTHROPIC_API_KEY or add it to server/.dev.vars");
   else if (!oneKey) console.log(`the key in .dev.vars doesn't look like a single Anthropic key (${key.length} characters); save it again`);
-  else console.log(`key loaded (${key.length} characters)`);
+  else console.log(`key loaded (${key.length} characters), effort ${process.env.READING_EFFORT || "medium"}`);
 });

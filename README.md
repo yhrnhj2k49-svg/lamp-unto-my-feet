@@ -53,24 +53,30 @@ appear above the passages — alongside them, never instead of them.
 
 ## What it costs to run
 
-Every reading is an API call you pay for. Rough per-reading cost with the
-defaults (`claude-opus-5`, adaptive thinking, effort `high`):
+Every reading is a call to Claude, paid for on your Anthropic key. The reading
+server uses `claude-opus-5` with adaptive thinking at effort **medium**.
 
-| | tokens | cost |
-|---|---|---|
-| Corpus in the system prompt, cached | ~7,000 | ~$0.004 (cache read) |
-| The reading (thinking + output) | ~2,500 | ~$0.06 |
-| **Per reading** | | **~$0.06** |
+Measured on the same four real situations at each setting:
 
-The first call after a cache expiry writes the cache instead (~$0.04 extra).
-Levers, cheapest first:
+| Effort | Average wait | Slowest | Quotes word-for-word KJV |
+|---|---|---|---|
+| medium (default) | 15.1s | 16.8s | 16 of 16 |
+| high | 20.2s | 28.0s | 16 of 16 |
 
-- **`output_config.effort`** in `server/src/index.ts` — `"medium"` is materially
-  faster and cheaper and still a strong reading. Change this first if the wait
-  feels long on a phone.
-- **The model.** `claude-sonnet-5` is $2/$10 per MTok against Opus 5's $5/$25.
-  Your call — Opus is the better reader.
-- **Rate limiting.** The worker caps 20 readings per IP per hour in memory. That
+Medium chose 13 of the same 16 passages as high. Four readings each shows the
+difference; it does not pin the numbers down.
+
+Nobody waits on this. The phone's own matches appear the moment you search, and
+Claude's reading replaces them when it arrives.
+
+Levers:
+
+- **`READING_EFFORT`**: `low`, `medium`, `high`, `xhigh` or `max`. Change it on the
+  deployed worker without touching code by adding `READING_EFFORT = "high"` under
+  `[vars]` in `server/wrangler.toml`, or set it as an environment variable locally.
+- **The model.** `claude-sonnet-5` costs $2/$10 per million tokens against Opus 5's
+  $5/$25. Opus is the better reader.
+- **Rate limiting.** The worker caps 20 readings per IP per hour, in memory. That
   blunts casual abuse but does not prevent it; put Cloudflare's Rate Limiting
   binding in front before you advertise the app anywhere.
 

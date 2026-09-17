@@ -1,6 +1,8 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  AccessibilityInfo,
   ActivityIndicator,
+  Animated,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -41,12 +43,37 @@ export default function ReadScreen() {
   const [answered, setAnswered] = useState("");
   const [busy, setBusy] = useState(false);
   const [fellBack, setFellBack] = useState("");
+  const [answeredKey, setAnsweredKey] = useState("");
+
+  // Every search is numbered, and only the newest may update the screen. A
+  // slow reading for an earlier search must never land on top of a later one.
+  const latest = useRef(0);
 
   const example = useMemo(() => findPassages(EXAMPLE_QUERY, []), []);
   const shown = reading ?? example;
-  const isExample = reading === null && !busy && answered === "";
+  const isExample = reading === null;
   const crisis = !isExample && needsCrisisNote(answered);
   const ready = text.trim().length > 2 || feelings.length > 0;
+  const key = `${text.trim()}|${feelings.join(",")}`;
+  // Pressing again on the very search Claude is still reading would only pay
+  // for the same reading twice. A changed search can go straight away.
+  const canSearch = ready && !(busy && key === answeredKey);
+
+  // New results settle in rather than snapping, unless reduced motion is on.
+  const fade = useRef(new Animated.Value(1)).current;
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion).catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (!reading || reduceMotion) return;
+    fade.setValue(0.25);
+    Animated.timing(fade, {
+      toValue: 1,
+      duration: 420,
+      useNativeDriver: Platform.OS !== "web",
+    }).start();
+  }, [reading, reduceMotion, fade]);
 
   const toggleFeeling = (k: Theme) => {
     Haptics.selectionAsync().catch(() => {});
@@ -54,33 +81,36 @@ export default function ReadScreen() {
   };
 
   const search = async () => {
-    if (!ready || busy) return;
+    if (!canSearch) return;
     Keyboard.dismiss();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     const q = text.trim();
+    const picked = feelings;
+    const id = ++latest.current;
     setAnswered(q);
+    setAnsweredKey(key);
     setFellBack("");
+
+    // The phone's own match lands at once, so there is something to read
+    // straight away, whatever happens next.
+    setReading(findPassages(q, picked));
     requestAnimationFrame(() => scroller.current?.scrollTo({ y: 320, animated: true }));
 
-    if (!aiAvailable) {
-      setReading(findPassages(q, feelings));
-      return;
-    }
+    if (!aiAvailable) return;
 
-    // Claude reads it. If that cannot happen — no signal, service down, a
-    // reading that came back malformed — the device concordance answers
-    // instead, so the app is never unusable.
+    // Meanwhile Claude reads it more closely and replaces the match when done.
+    // If that fails, the phone's match simply stays.
     setBusy(true);
-    setReading(null);
     try {
-      setReading(await closerReading(q, feelings));
+      const closer = await closerReading(q, picked);
+      if (id !== latest.current) return;
+      setReading(closer);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     } catch (e) {
-      setFellBack(
-        e instanceof ReadingError ? e.message : "The reading could not be made."
-      );
-      setReading(findPassages(q, feelings));
+      if (id !== latest.current) return;
+      setFellBack(e instanceof ReadingError ? e.message : "The reading could not be made.");
     } finally {
-      setBusy(false);
+      if (id === latest.current) setBusy(false);
     }
   };
 
@@ -150,9 +180,9 @@ export default function ReadScreen() {
 
           <Pressable
             onPress={search}
-            disabled={!ready || busy}
+            disabled={!canSearch}
             accessibilityRole="button"
-            accessibilityState={{ disabled: !ready || busy, busy }}
+            accessibilityState={{ disabled: !canSearch }}
             style={[
               s.go,
               ready
@@ -161,7 +191,7 @@ export default function ReadScreen() {
             ]}
           >
             <Text style={[s.goText, { color: ready ? c.ground : c.ink3 }]}>
-              {busy ? "Reading\u2026" : "Find the passages"}
+              Find the passages
             </Text>
           </Pressable>
         </View>
@@ -169,7 +199,7 @@ export default function ReadScreen() {
         {/* results */}
         <View style={[s.resHead, { borderBottomColor: c.rule }]}>
           <Text style={[s.resTitle, { color: c.ink }]}>
-            {busy ? "Reading" : `${shown.passages.length} passages`}
+            {`${shown.passages.length} passages`}
           </Text>
           <Text
             style={[
@@ -178,13 +208,11 @@ export default function ReadScreen() {
               { color: isExample ? c.indigo : c.gilt, borderColor: isExample ? c.indigo : c.rule },
             ]}
           >
-            {busy
-              ? "In progress"
-              : isExample
-                ? "Example"
-                : shown.source === "reading"
-                  ? "Read by Claude"
-                  : "Matched on this phone"}
+            {isExample
+              ? "Example"
+              : shown.source === "reading"
+                ? "Read by Claude"
+                : "Matched on this phone"}
           </Text>
         </View>
 
@@ -200,41 +228,45 @@ export default function ReadScreen() {
         ) : null}
 
         {busy ? (
-          <View style={s.reading}>
-            <ActivityIndicator color={c.rubric} />
-            <Text style={[s.readingText, { color: c.ink2 }]}>
-              Reading what you wrote, and looking for the passages that meet it.
+          <View
+            style={[s.refining, { borderColor: c.rule, backgroundColor: c.panel }]}
+            accessibilityLiveRegion="polite"
+          >
+            <ActivityIndicator size="small" color={c.rubric} />
+            <Text style={[s.refiningText, { color: c.ink2 }]}>
+              Claude is reading this more closely. Until then, these are the closest matches on
+              your phone.
             </Text>
           </View>
-        ) : (
-          <>
-            {crisis ? (
-              <View style={[s.crisis, { borderColor: c.rubric }]}>
-                <Text style={[s.crisisTitle, { color: c.rubric }]}>{CRISIS_NOTE.title}</Text>
-                <Text style={[s.crisisBody, { color: c.ink }]}>{CRISIS_NOTE.body}</Text>
-                {CRISIS_NOTE.lines.map((l) => (
-                  <Text key={l} style={[s.crisisLine, { color: c.ink2 }]}>
-                    {l}
-                  </Text>
-                ))}
-              </View>
-            ) : null}
+        ) : null}
 
-            {fellBack ? (
-              <Text style={[s.fellBack, { color: c.ink3, borderLeftColor: c.gilt }]}>
-                {fellBack} Matched on this phone instead.
-              </Text>
-            ) : null}
+        <Animated.View style={{ opacity: fade }}>
+          {crisis ? (
+            <View style={[s.crisis, { borderColor: c.rubric }]}>
+              <Text style={[s.crisisTitle, { color: c.rubric }]}>{CRISIS_NOTE.title}</Text>
+              <Text style={[s.crisisBody, { color: c.ink }]}>{CRISIS_NOTE.body}</Text>
+              {CRISIS_NOTE.lines.map((l) => (
+                <Text key={l} style={[s.crisisLine, { color: c.ink2 }]}>
+                  {l}
+                </Text>
+              ))}
+            </View>
+          ) : null}
 
-            <Text style={[s.opening, { color: c.ink, borderLeftColor: c.rubric }]}>
-              {shown.opening}
+          {fellBack ? (
+            <Text style={[s.fellBack, { color: c.ink3, borderLeftColor: c.gilt }]}>
+              {fellBack} These are the closest matches on your phone.
             </Text>
+          ) : null}
 
-            {shown.passages.map((p, i) => (
-              <Passage key={p.ref} verse={p} theme={p.themes[0]} first={i === 0} />
-            ))}
-          </>
-        )}
+          <Text style={[s.opening, { color: c.ink, borderLeftColor: c.rubric }]}>
+            {shown.opening}
+          </Text>
+
+          {shown.passages.map((p, i) => (
+            <Passage key={p.ref} verse={p} theme={p.themes[0]} first={i === 0} />
+          ))}
+        </Animated.View>
 
         <Text style={[s.foot, { color: c.ink3, borderTopColor: c.rule }]}>
           King James Version, which is in the public domain.{" "}
@@ -282,8 +314,17 @@ const s = StyleSheet.create({
   crisisBody: { fontFamily: font.ui, fontSize: 13.5, lineHeight: 21 },
   crisisLine: { fontFamily: font.ui, fontSize: 13, lineHeight: 20 },
 
-  reading: { marginTop: space.xl, alignItems: "center", gap: space.md, paddingVertical: space.lg },
-  readingText: { fontFamily: font.ui, fontSize: 13.5, lineHeight: 21, textAlign: "center", maxWidth: 300 },
+  refining: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    marginTop: space.md,
+    borderWidth: 1,
+    borderRadius: 1,
+    paddingVertical: 11,
+    paddingHorizontal: 13,
+  },
+  refiningText: { flex: 1, fontFamily: font.ui, fontSize: 13, lineHeight: 19 },
   fellBack: {
     fontFamily: font.ui,
     fontSize: 12.5,

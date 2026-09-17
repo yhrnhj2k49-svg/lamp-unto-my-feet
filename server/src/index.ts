@@ -14,7 +14,14 @@ import { CORPUS, CORPUS_SIZE } from "./corpus";
 
 export interface Env {
   ANTHROPIC_API_KEY: string;
+  /** low | medium | high | xhigh | max. Anything else falls back to medium. */
+  READING_EFFORT?: string;
 }
+
+const EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
+type Effort = (typeof EFFORTS)[number];
+const effortFrom = (value?: string): Effort =>
+  (EFFORTS as readonly string[]).includes(value ?? "") ? (value as Effort) : "medium";
 
 const MAX_INPUT = 2000;
 const RATE_LIMIT = 20; // requests per IP per window
@@ -117,10 +124,11 @@ export default {
         model: "claude-opus-5",
         max_tokens: 16000,
         thinking: { type: "adaptive" },
-        // Quality/latency/cost knob. "high" is the default and the best reading;
-        // "medium" is noticeably faster and cheaper and still very good. If the
-        // wait feels long on a phone, change this line first.
-        output_config: { effort: "high", format: zodOutputFormat(ReadingSchema) },
+        // Quality/latency/cost knob, set with READING_EFFORT so it can be tuned
+        // on the deployed worker without a code change. Defaults to medium: over
+        // four real readings it averaged 15s against 20s at high, with every
+        // quote still verbatim and 13 of 16 passages the same.
+        output_config: { effort: effortFrom(env.READING_EFFORT), format: zodOutputFormat(ReadingSchema) },
         // The corpus is the stable prefix; the situation below it is what varies.
         system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
         messages: [
