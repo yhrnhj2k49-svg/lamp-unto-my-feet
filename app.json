@@ -7,7 +7,6 @@
     "icon": "./assets/icon.png",
     "scheme": "lampuntomyfeet",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.lampuntomyfeet.app",
@@ -23,7 +22,6 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -48,6 +46,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "82c8f262-f787-44b2-9be7-dd3e035a8451"
+      }
+    },
+    "owner": "darrenokoro"
   }
 }
