@@ -69,7 +69,16 @@ export async function hydrateBibles() {
       installed = [...memory.keys()];
     } else {
       const dir = root();
-      installed = dir.exists ? dir.list().filter((e) => e instanceof Directory).map((e) => e.name) : [];
+      // index.json is written last, so a folder without it is a download that
+      // was interrupted. Clear it out rather than list a translation that opens blank.
+      installed = [];
+      if (dir.exists) {
+        for (const e of dir.list()) {
+          if (!(e instanceof Directory)) continue;
+          if (new File(e, "index.json").exists) installed.push(e.name);
+          else e.delete();
+        }
+      }
     }
   } catch {
     installed = [];
