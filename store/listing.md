@@ -87,3 +87,87 @@ Answer the questionnaires honestly. Points that matter: the app shows AI-generat
 - Privacy policy: https://yhrnhj2k49-svg.github.io/lamp-unto-my-feet/privacy.html
 - Support: https://yhrnhj2k49-svg.github.io/lamp-unto-my-feet/support.html
 - Marketing: https://yhrnhj2k49-svg.github.io/lamp-unto-my-feet/
+
+---
+
+# Google Play — the rest of the console
+
+## Before you can publish at all
+
+A **personal** developer account opened after 13 Nov 2023 cannot ship straight
+to production. You must first run a **closed test with at least 12 testers,
+opted in continuously for 14 days**, then apply for production access, which
+Google reviews in about 7 days. Testers who drop out break the streak and the
+clock restarts. Budget three weeks, and start collecting the 12 Gmail addresses
+before anything else — it is the only part that cannot be hurried.
+
+## Store listing assets Play requires
+
+| Asset | Spec | Status |
+|---|---|---|
+| App icon | 512 × 512 PNG, 32-bit, no transparency | `store/play/icon-512.png` |
+| Feature graphic | 1024 × 500 PNG or JPG, no transparency | `store/play/feature-graphic.png` |
+| Phone screenshots | 2–8, min 320 px, max 3840 px, ratio at most 2:1 | capture from the app |
+| Short description | 80 chars | see table above |
+| Full description | 4000 chars | see Description above |
+
+## Content rating questionnaire (IARC)
+
+Answer these as written; they are what the app actually does.
+
+- Violence, sexuality, profanity, controlled substances, gambling: **no** to all.
+- **Does the app contain user-generated content?** No — nothing a user writes is
+  shown to any other user. What they write goes to Claude and comes back only
+  to them.
+- **Does the app reference or depict self-harm or suicide?** Yes, in a
+  supportive context only: when what someone writes suggests danger, the app
+  shows crisis helpline numbers. Say so plainly; hiding it is worse.
+- **Does the app share the user's location?** No.
+- **Does it allow users to communicate with each other?** No.
+
+## Target audience and content
+
+- Target age groups: **13+**. Do not tick under-13; that pulls in Families
+  policy, which requires a different AI-content posture entirely.
+- Is the app appealing to children? **No.**
+
+## App access
+
+**All functionality is available without any special access.** No account, no
+login, no credentials. Say this in the App access section, or review stalls
+while Google waits for sign-in details that do not exist.
+
+## Ads
+
+**Contains ads: No.**
+
+## Data safety — the exact answers
+
+- Does your app collect or share any of the required user data types? **Yes.**
+- Data type: **App activity → Other user-generated content.**
+  - Collected: **Yes.** Shared: **No** (Anthropic processes it as a service
+    provider on the app's behalf; confirm against the form's current wording).
+  - Is it optional? **Yes** — the user is asked first and can decline, and the
+    app then matches passages on the device with nothing leaving the phone.
+  - Purpose: **App functionality** only. Not ads, not analytics, not
+    personalisation.
+- Encrypted in transit: **Yes** (HTTPS to the Cloudflare Worker).
+- Can users request deletion? There is nothing stored about a user to delete —
+  no accounts, no server-side records. Kept passages live on the device and go
+  when the app is uninstalled.
+
+## AI-generated content policy
+
+Play requires apps with AI-generated content to offer in-app reporting. This app
+has it: **"Report this reading"** on a reading, and **Report** under "How to
+live this". Reports carry Claude's own words and the reason — never what the
+user wrote. Mention this in the production-access application.
+
+## Applying for production access — what they ask
+
+1. *How did recruiting testers go, and how did they engage?* Answer honestly.
+2. *Who is the app for and what is its value?* People carrying something hard
+   who want scripture that meets it, not a search box.
+3. *Expected installs in year one?* A range is fine; do not inflate it.
+4. *What did you change because of testing?* Keep notes during the 14 days —
+   this question is easier to answer if you wrote things down as they came up.
