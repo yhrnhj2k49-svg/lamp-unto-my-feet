@@ -104,7 +104,26 @@ const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
+  Vary: "Origin",
 };
+
+// Phones send no Origin header; browsers always do. So a request carrying an
+// Origin we do not know is a web page calling this server, and the only reason
+// to do that is to spend someone else's Anthropic credit. Turn it away before
+// any of that can happen. Add an entry here if the app is ever served as a
+// website from a real domain.
+const ORIGIN_ALLOWED = [
+  /^http:\/\/localhost(:\d+)?$/,
+  /^http:\/\/127\.0\.0\.1(:\d+)?$/,
+  /^https:\/\/yhrnhj2k49-svg\.github\.io$/,
+];
+const originOk = (origin: string | null) =>
+  origin === null || ORIGIN_ALLOWED.some((re) => re.test(origin));
+
+// Nothing legitimate comes near this. The situation is capped at 2000
+// characters, and the cap below is enforced before the body is parsed at all,
+// so a large body cannot make the server do work on the way to rejecting it.
+const MAX_BODY = 64 * 1024;
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -264,8 +283,12 @@ async function report(input: Input, env: Env): Promise<Response> {
 
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
+    if (!originOk(req.headers.get("Origin"))) return json({ error: "Not allowed from there." }, 403);
     if (req.method === "OPTIONS") return new Response(null, { headers: cors });
     if (req.method !== "POST") return json({ error: "POST only" }, 405);
+
+    const declared = Number(req.headers.get("Content-Length") ?? 0);
+    if (declared > MAX_BODY) return json({ error: "That is too large to read." }, 413);
 
     const path = new URL(req.url).pathname.replace(/\/+$/, "");
     const route: Route = path.endsWith("/living") ? "living" : path.endsWith("/report") ? "report" : "reading";
@@ -275,9 +298,13 @@ export default {
       return json({ error: "Too many requests. Try again later." }, 429);
     }
 
+    // Content-Length can be left off a chunked request, so measure the body
+    // itself rather than trusting what the caller said it would be.
     let input: Input;
     try {
-      const parsed: unknown = await req.json();
+      const raw = await req.text();
+      if (raw.length > MAX_BODY) return json({ error: "That is too large to read." }, 413);
+      const parsed: unknown = JSON.parse(raw);
       if (!parsed || typeof parsed !== "object") throw new Error();
       input = parsed as Input;
     } catch {
