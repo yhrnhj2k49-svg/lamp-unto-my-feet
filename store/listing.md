@@ -1,4 +1,4 @@
-# Store listing — Lamp Unto My Feet
+# Store listing — He Answers
 
 Draft copy and answers for App Store Connect and the Google Play Console.
 **Review everything here before submitting.** The privacy answers describe how
@@ -10,7 +10,7 @@ the app works as built; they are not legal advice.
 
 | Field | Limit | Text | Length |
 |---|---|---|---|
-| App name (both stores) | 30 | Lamp Unto My Feet | 17 |
+| App name (both stores) | 30 | He Answers | 10 |
 | App Store subtitle | 30 | Scripture for what you carry | 28 |
 | Play short description | 80 | Write what you're carrying. Get the scripture that meets it. | 60 |
 | App Store keywords | 100 | bible,scripture,verses,prayer,devotional,kjv,comfort,grief,anxiety,faith,psalms,christian,hope | 94 |
@@ -24,7 +24,7 @@ Suggested category: **Reference** (primary), **Books** or **Lifestyle** (seconda
 
 ## Description (both stores)
 
-Write down what is actually happening and how it has left you. Lamp Unto My Feet sets out the passages of scripture that meet it.
+Write down what is actually happening and how it has left you. He Answers sets out the passages of scripture that meet it.
 
 PASSAGES CHOSEN FOR YOU
 With your permission, Claude, an AI made by Anthropic, reads what you write and chooses four passages for your particular situation, with a line on why each one applies to you. Losing a job at 58 and losing a first job at 22 are not the same weight, and the passages shouldn't be either.

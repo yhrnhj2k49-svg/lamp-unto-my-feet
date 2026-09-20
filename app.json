@@ -1,21 +1,21 @@
 {
   "expo": {
-    "name": "Lamp Unto My Feet",
+    "name": "He Answers",
     "slug": "lamp-unto-my-feet",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "lampuntomyfeet",
+    "scheme": "heanswers",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.lampuntomyfeet.app",
+      "bundleIdentifier": "com.heanswers.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.lampuntomyfeet.app",
+      "package": "com.heanswers.app",
       "adaptiveIcon": {
         "backgroundColor": "#131527",
         "backgroundImage": "./assets/android-icon-background.png",

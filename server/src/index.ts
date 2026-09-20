@@ -1,4 +1,4 @@
-// The reading server for Lamp Unto My Feet.
+// The reading server for He Answers.
 //
 // Holds the Anthropic API key so the app never has to. Two routes:
 //

@@ -1,4 +1,4 @@
-// Design tokens for Lamp Unto My Feet.
+// Design tokens for He Answers.
 //
 // The palette comes from an illuminated Bible rather than a plain printed one:
 // ivory vellum catching the light, ultramarine ground from lapis lazuli, gold

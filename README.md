@@ -1,4 +1,4 @@
-# Lamp Unto My Feet
+# He Answers
 
 Write down what you are actually going through and how it has left you. Claude
 reads it and sets out the passages that meet it — each with a plain-English

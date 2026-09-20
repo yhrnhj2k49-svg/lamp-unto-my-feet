@@ -162,10 +162,11 @@ export default function ReadScreen() {
       >
         {/* masthead */}
         <View style={[s.masthead, { borderBottomColor: c.giltBright }]}>
-          <Text style={[s.wordmark, { color: c.ink }]}>Lamp Unto My Feet</Text>
+          <Text style={[s.wordmark, { color: c.ink }]}>He Answers</Text>
           <Text style={[s.epigraph, { color: c.ink2 }]}>
-            Thy word is a lamp unto my feet, and a light unto my path.
-            <Text style={[label, { color: c.rubric }]}>   Psalm 119:105</Text>
+            Call unto me, and I will answer thee, and shew thee great and mighty
+            things, which thou knowest not.
+            <Text style={[label, { color: c.rubric }]}>{"   Jeremiah 33:3"}</Text>
           </Text>
         </View>
 
