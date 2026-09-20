@@ -84,6 +84,8 @@ Answer the questionnaires honestly. Points that matter: the app shows AI-generat
 
 ## Links
 
+- Support email (both stores ask for one, and it is shown publicly):
+  **richbygodfr@gmail.com**
 - Privacy policy: https://yhrnhj2k49-svg.github.io/lamp-unto-my-feet/privacy.html
 - Support: https://yhrnhj2k49-svg.github.io/lamp-unto-my-feet/support.html
 - Marketing: https://yhrnhj2k49-svg.github.io/lamp-unto-my-feet/
