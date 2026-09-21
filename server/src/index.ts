@@ -17,6 +17,7 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import { PASSAGES } from "./corpus";
 import { cleanStrings } from "./text";
+import { podcast } from "./podcast";
 
 export interface Env {
   ANTHROPIC_API_KEY: string;
@@ -28,6 +29,7 @@ export interface Env {
   READING_LIMIT?: RateLimit;
   LIVING_LIMIT?: RateLimit;
   REPORT_LIMIT?: RateLimit;
+  PODCAST_LIMIT?: RateLimit;
   /** Where reports are kept. Absent locally, where they go to the log instead. */
   REPORTS?: KVNamespace;
 }
@@ -40,7 +42,7 @@ const effortFrom = (value?: string): Effort =>
 const MAX_INPUT = 2000;
 const WINDOW_MS = 60 * 60 * 1000;
 // Per IP, per hour. A reading can be followed by a tap on each of its passages.
-const LIMITS = { reading: 20, living: 80, report: 20 } as const;
+const LIMITS = { reading: 20, living: 80, report: 20, podcast: 240 } as const;
 type Route = keyof typeof LIMITS;
 
 // The concordance as the reading prompt shows it, and as /living looks it up.
@@ -102,7 +104,7 @@ Address the person as "you". Never assume their gender, age or circumstances bey
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
   Vary: "Origin",
 };
@@ -149,7 +151,12 @@ function overLimit(key: string, cap: number): boolean {
 }
 
 async function limited(env: Env, route: Route, ip: string): Promise<boolean> {
-  const binding = { reading: env.READING_LIMIT, living: env.LIVING_LIMIT, report: env.REPORT_LIMIT }[route];
+  const binding = {
+    reading: env.READING_LIMIT,
+    living: env.LIVING_LIMIT,
+    report: env.REPORT_LIMIT,
+    podcast: env.PODCAST_LIMIT,
+  }[route];
   if (binding && !(await binding.limit({ key: ip })).success) return true;
   return overLimit(`${ip}:${route}`, LIMITS[route]);
 }
@@ -285,6 +292,15 @@ export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     if (!originOk(req.headers.get("Origin"))) return json({ error: "Not allowed from there." }, 403);
     if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+
+    const ip = req.headers.get("CF-Connecting-IP") ?? "local";
+
+    // The one read-only route: recent episodes of the listed podcasts.
+    if (req.method === "GET" && new URL(req.url).pathname.replace(/\/+$/, "").endsWith("/podcast")) {
+      if (await limited(env, "podcast", ip)) return json({ error: "Too many requests. Try again later." }, 429);
+      return podcast(req, cors);
+    }
+
     if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
     const declared = Number(req.headers.get("Content-Length") ?? 0);
@@ -293,7 +309,6 @@ export default {
     const path = new URL(req.url).pathname.replace(/\/+$/, "");
     const route: Route = path.endsWith("/living") ? "living" : path.endsWith("/report") ? "report" : "reading";
 
-    const ip = req.headers.get("CF-Connecting-IP") ?? "local";
     if (await limited(env, route, ip)) {
       return json({ error: "Too many requests. Try again later." }, 429);
     }

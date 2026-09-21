@@ -41,3 +41,13 @@ namespace_id = "1003"
 [[kv_namespaces]]
 binding = "REPORTS"
 id = "a3b604472b1f4d91999412d93bce8ca1"
+
+# Listing podcast episodes costs nothing from Anthropic, so this is generous;
+# it only stops the route being hammered.
+[[ratelimits]]
+name = "PODCAST_LIMIT"
+namespace_id = "1004"
+
+  [ratelimits.simple]
+  limit = 30
+  period = 60
