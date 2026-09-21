@@ -4,7 +4,7 @@ import { VERSES } from "../../src/data/verses";
 import { CRISIS_NOTE } from "../../src/engine/safety";
 import { aiAvailable } from "../../src/engine/ai";
 import { setConsent, useConsent } from "../../src/store/consent";
-import { PRIVACY_URL, SUPPORT_URL } from "../../src/links";
+import { PRIVACY_URL, SUPPORT_URL, TERMS_URL } from "../../src/links";
 import { font, label, space } from "../../src/theme";
 import { usePalette } from "../../src/usePalette";
 import PageGlow from "../../src/components/PageGlow";
@@ -129,6 +129,7 @@ export default function AboutScreen() {
           delete the app. Bible translations download from GitHub, like any web page.
         </P>
         <A onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})}>Read the privacy policy</A>
+        <A onPress={() => Linking.openURL(TERMS_URL).catch(() => {})}>Read the terms of use</A>
       </Section>
 
       <Section title="The text">

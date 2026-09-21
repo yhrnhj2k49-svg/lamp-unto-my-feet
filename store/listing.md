@@ -41,6 +41,9 @@ No account, no ads, no tracking. The app asks before anything you write is sent.
 THE WHOLE BIBLE, OFFLINE
 Ten complete translations, free to download and read with no signal: Berean Standard, New Heart English, King James, American King James, American Standard, Young's Literal, Darby, Bible in Basic English, Catholic Public Domain, and Webster's.
 
+WATCH AND LISTEN
+The JESUS film and other full-length films from the Jesus Film Project, short animated studies from BibleProject, and daily prayer, Bible readings and teaching from six podcasts across Catholic, Protestant and non-denominational voices.
+
 KEEP WHAT LANDS
 Keep the passages you want to come back to. They stay on your phone.
 
@@ -87,6 +90,7 @@ Answer the questionnaires honestly. Points that matter: the app shows AI-generat
 - Support email (both stores ask for one, and it is shown publicly):
   **richbygodfr@gmail.com**
 - Privacy policy: https://yhrnhj2k49-svg.github.io/lamp-unto-my-feet/privacy.html
+- Terms of use: https://yhrnhj2k49-svg.github.io/lamp-unto-my-feet/terms.html
 - Support: https://yhrnhj2k49-svg.github.io/lamp-unto-my-feet/support.html
 - Marketing: https://yhrnhj2k49-svg.github.io/lamp-unto-my-feet/
 
@@ -173,3 +177,26 @@ user wrote. Mention this in the production-access application.
 3. *Expected installs in year one?* A range is fine; do not inflate it.
 4. *What did you change because of testing?* Keep notes during the 14 days —
    this question is easier to answer if you wrote things down as they came up.
+
+
+---
+
+# Watch & Listen — what it changes on the privacy forms
+
+Videos play in a YouTube embed (privacy-enhanced mode) inside the app, and
+podcast audio streams from each show's host. Both are third parties receiving
+a user's IP address and device details once the user opens a video or plays
+an episode. Browsing the lists sends nothing to either.
+
+- **Apple privacy label.** The app's own code still collects nothing for
+  tracking. Whether an embedded YouTube player counts as a "third-party
+  partner" whose collection must be declared is a judgment call. The
+  conservative answer is to add **Identifiers → Device ID** and **Usage Data →
+  Product Interaction**, *not linked* and *not used for tracking* by this app,
+  with a note that they reach Google only when a video is opened. Decide this
+  deliberately; understating it is the riskier mistake.
+- **Google Play data safety.** Same reasoning. Read Google's current guidance
+  on data collected through WebViews and third-party libraries when filling
+  in the form, and answer against what the app actually does.
+- **Terms of use** are linked from the consent sheet and About, and live at
+  the URL above. They are drafted, not reviewed by a lawyer.

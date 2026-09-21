@@ -1,6 +1,6 @@
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import Sheet from "./Sheet";
-import { ANTHROPIC_PRIVACY_URL } from "../links";
+import { ANTHROPIC_PRIVACY_URL, TERMS_URL } from "../links";
 import { font, space } from "../theme";
 import { usePalette } from "../usePalette";
 
@@ -47,7 +47,18 @@ export default function ConsentSheet({ visible, onAllow, onDecline, onDismiss }:
           <Text style={[s.btnText, { color: c.ink }]}>Keep it on my phone</Text>
         </Pressable>
       </View>
-      <Text style={[s.small, { color: c.ink3 }]}>You can change this any time in About.</Text>
+      <Text style={[s.small, { color: c.ink3 }]}>
+        You can change this any time in About. Claude's writing can be wrong, and the app is not
+        counselling or a crisis service. Using it means you agree to the{" "}
+        <Text
+          accessibilityRole="link"
+          onPress={() => Linking.openURL(TERMS_URL).catch(() => {})}
+          style={{ textDecorationLine: "underline" }}
+        >
+          terms of use
+        </Text>
+        .
+      </Text>
     </Sheet>
   );
 }
