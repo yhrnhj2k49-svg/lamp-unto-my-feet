@@ -21,6 +21,7 @@ export const SHOWS: Record<string, string> = {
 export type Episode = {
   title: string;
   audio: string;
+  /** YYYY-MM-DD, the publisher's own calendar day. */
   published: string | null;
   seconds: number | null;
   summary: string;
@@ -60,6 +61,21 @@ const toSeconds = (raw: string): number | null => {
   return parts.reduce((acc, n) => acc * 60 + n, 0);
 };
 
+const MONTHS: Record<string, number> = {
+  jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+};
+
+// The day as the publisher wrote it. Converting through UTC moved Pray As You
+// Go's "Tuesday 22 September" episode — published at midnight in London — to
+// Monday the 21st for anyone in America.
+const calendarDay = (raw: string): string | null => {
+  const m = raw.match(/(\d{1,2})\s+([A-Za-z]{3})[a-z]*\.?\s+(\d{4})/);
+  const month = m ? MONTHS[m[2].toLowerCase()] : undefined;
+  if (m && month) return `${m[3]}-${String(month).padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+};
+
 function parse(xml: string): Episode[] {
   const out: Episode[] = [];
   for (const m of xml.matchAll(/<item[\s>][\s\S]*?<\/item>/gi)) {
@@ -68,12 +84,11 @@ function parse(xml: string): Episode[] {
     // Plain http audio is refused by iOS and exposes the listener; skip it.
     if (!audio || !audio.startsWith("https://")) continue;
     const date = plain(tag(item, "pubDate"));
-    const when = date ? new Date(date) : null;
     const summary = plain(tag(item, "itunes:summary") || tag(item, "description"));
     out.push({
       title: plain(tag(item, "title")),
       audio: decode(audio),
-      published: when && !Number.isNaN(when.getTime()) ? when.toISOString() : null,
+      published: date ? calendarDay(date) : null,
       seconds: toSeconds(tag(item, "itunes:duration")),
       summary: summary.length > 280 ? `${summary.slice(0, 277).trimEnd()}…` : summary,
     });
@@ -115,11 +130,17 @@ export async function podcast(req: Request, headers: Record<string, string>): Pr
   if (!feed) return reply({ error: "Unknown show." }, 404);
 
   // One cache entry per show, whoever asks, so a busy hour costs one fetch.
-  const key = new Request(`https://cache.internal/podcast/${id}`);
+  // Versioned, so a change to what is sent back is not masked by an hour of old copies.
+  const key = new Request(`https://cache.internal/podcast/v2/${id}`);
   const cache = typeof caches !== "undefined" ? (caches as unknown as { default: Cache }).default : null;
   const hit = cache ? await cache.match(key) : undefined;
   if (hit) {
-    return new Response(hit.body, { status: 200, headers: { ...Object.fromEntries(hit.headers), ...headers } });
+    // Headers.set replaces regardless of case. Spreading plain objects does not:
+    // the cached copy's lowercase keys and these capitalised ones both survived,
+    // and browsers refuse a response whose CORS header reads "*, *".
+    const merged = new Headers(hit.headers);
+    for (const [k, v] of Object.entries(headers)) merged.set(k, v);
+    return new Response(hit.body, { status: 200, headers: merged });
   }
 
   try {
