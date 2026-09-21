@@ -7,6 +7,8 @@ import { usePalette } from "../../src/usePalette";
 import PageGlow from "../../src/components/PageGlow";
 import Living from "../../src/components/Living";
 import { livingFor } from "../../src/data/living";
+import Illuminated from "../../src/components/Illuminated";
+import GoldRule from "../../src/components/GoldRule";
 
 export default function KeptScreen() {
   const c = usePalette();
@@ -23,7 +25,8 @@ export default function KeptScreen() {
         { paddingTop: insets.top + space.lg, paddingBottom: space.xxl },
       ]}
     >
-      <View style={[s.head, { borderBottomColor: c.giltBright }]}>
+      <View style={[s.head, { borderBottomWidth: 0, paddingBottom: space.sm + 6 }]}>
+        <GoldRule pinned />
         <Text style={[s.title, { color: c.ink }]}>Kept</Text>
         <Text style={[label, { color: c.gilt }]}>
           {kept.length === 0 ? "Nothing yet" : `${kept.length} passage${kept.length === 1 ? "" : "s"}`}
@@ -55,10 +58,7 @@ export default function KeptScreen() {
                 <Text style={[s.drop, { color: c.ink3, borderBottomColor: c.rule }]}>Remove</Text>
               </Pressable>
             </View>
-            <Text style={[s.verse, { color: c.ink }]}>
-              <Text style={[s.pilcrow, { color: c.rubric }]}>¶ </Text>
-              {k.text}
-            </Text>
+            <Illuminated text={k.text} size={18.5} lineHeight={30} />
             <Text style={[s.note, { color: c.ink2 }]}>
               <Text style={[label, { color: c.gilt }]}>In plain words  </Text>
               {k.plain}
@@ -98,7 +98,5 @@ const s = StyleSheet.create({
   rowHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" },
   ref: { fontFamily: font.displayMedium, fontSize: 17 },
   drop: { fontFamily: font.ui, fontSize: 12, borderBottomWidth: 1, paddingBottom: 1 },
-  verse: { fontFamily: font.serif, fontSize: 18.5, lineHeight: 30 },
-  pilcrow: { fontFamily: font.serifBold, fontSize: 18.5 },
   note: { fontFamily: font.ui, fontSize: 13.5, lineHeight: 21 },
 });

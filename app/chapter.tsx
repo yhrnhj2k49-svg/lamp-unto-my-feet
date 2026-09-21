@@ -8,6 +8,7 @@ import { readChapter, readIndex } from "../src/bible/store";
 import { OFFSITE, offsiteUrl } from "../src/bible/catalog";
 import { font, label, space } from "../src/theme";
 import { usePalette } from "../src/usePalette";
+import GoldRule from "../src/components/GoldRule";
 
 export default function ChapterScreen() {
   const c = usePalette();
@@ -42,7 +43,9 @@ export default function ChapterScreen() {
           <Text style={[s.back, { color: c.ink2 }]}>‹ Books</Text>
         </Pressable>
 
-        <View style={[s.head, { borderBottomColor: c.giltBright }]}>
+        <View style={[s.head, { borderBottomWidth: 0, paddingBottom: space.sm + 6 }]}>
+
+          <GoldRule pinned />
           <Text style={[s.ref, { color: c.ink }]}>{reference}</Text>
           <Text style={[label, { color: c.gilt }]}>{index?.name ?? ""}</Text>
         </View>

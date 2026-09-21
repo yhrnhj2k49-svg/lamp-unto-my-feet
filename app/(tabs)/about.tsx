@@ -8,6 +8,7 @@ import { PRIVACY_URL, SUPPORT_URL } from "../../src/links";
 import { font, label, space } from "../../src/theme";
 import { usePalette } from "../../src/usePalette";
 import PageGlow from "../../src/components/PageGlow";
+import GoldRule from "../../src/components/GoldRule";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   const c = usePalette();
@@ -43,7 +44,8 @@ export default function AboutScreen() {
         { paddingTop: insets.top + space.lg, paddingBottom: space.xxl },
       ]}
     >
-      <View style={[s.head, { borderBottomColor: c.giltBright }]}>
+      <View style={[s.head, { borderBottomWidth: 0, paddingBottom: space.sm + 6 }]}>
+        <GoldRule pinned />
         <Text style={[s.title, { color: c.ink }]}>About</Text>
       </View>
 

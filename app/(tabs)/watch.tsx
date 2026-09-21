@@ -8,6 +8,7 @@ import { usePalette } from "../../src/usePalette";
 import PageGlow from "../../src/components/PageGlow";
 import Fleuron from "../../src/components/Fleuron";
 import { SHOWS, VIDEO_GROUPS, minutesLabel } from "../../src/data/media";
+import GoldRule from "../../src/components/GoldRule";
 
 type Part = "watch" | "listen";
 
@@ -25,7 +26,8 @@ export default function WatchScreen() {
         style={{ backgroundColor: "transparent" }}
         contentContainerStyle={[s.page, { paddingTop: insets.top + space.lg, paddingBottom: space.xxl }]}
       >
-        <View style={[s.head, { borderBottomColor: c.giltBright }]}>
+        <View style={[s.head, { borderBottomWidth: 0, paddingBottom: space.sm + 6 }]}>
+          <GoldRule pinned />
           <Text style={[s.title, { color: c.ink }]}>{part === "watch" ? "Watch" : "Listen"}</Text>
           <View style={s.switch} accessibilityRole="tablist">
             {(["watch", "listen"] as const).map((p) => {

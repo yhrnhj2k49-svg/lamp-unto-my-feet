@@ -8,6 +8,8 @@ import type { Personal } from "../engine/ai";
 import type { Theme, Verse } from "../data/verses";
 import { livingFor } from "../data/living";
 import Living from "./Living";
+import Illuminated from "./Illuminated";
+import Fleuron from "./Fleuron";
 
 type Props = {
   verse: Verse;
@@ -49,11 +51,14 @@ function PassageCard({ verse, theme, first, personalize }: Props) {
   };
 
   return (
+    <>
+    {/* Between passages, a printer's ornament rather than a plain rule. */}
+    {!first && <Fleuron tight />}
     <View
       style={[
         s.wrap,
         wide && s.wrapWide,
-        { borderTopColor: first ? c.rule : c.ruleSoft, borderTopWidth: 1 },
+        first && { borderTopColor: c.rule, borderTopWidth: 1 },
       ]}
     >
       <View style={[s.margin, wide && s.marginWide]}>
@@ -78,10 +83,7 @@ function PassageCard({ verse, theme, first, personalize }: Props) {
       </View>
 
       <View style={s.body}>
-        <Text style={[s.verse, { color: c.ink }]}>
-          <Text style={[s.pilcrow, { color: c.rubric }]}>¶ </Text>
-          {verse.text}
-        </Text>
+        <Illuminated text={verse.text} />
 
         <View style={s.notes}>
           <Text style={[s.note, { color: c.ink2 }]}>
@@ -103,6 +105,7 @@ function PassageCard({ verse, theme, first, personalize }: Props) {
         />
       </View>
     </View>
+    </>
   );
 }
 
@@ -121,8 +124,6 @@ const s = StyleSheet.create({
   ref: { fontFamily: font.displayMedium, fontSize: 17 },
   theme: {},
   keep: { fontFamily: font.ui, fontSize: 12, letterSpacing: 0.5, borderBottomWidth: 1, paddingBottom: 1 },
-  verse: { fontFamily: font.serif, fontSize: 19.5, lineHeight: 32 },
-  pilcrow: { fontFamily: font.serifBold, fontSize: 19.5 },
   notes: { marginTop: space.md, gap: space.sm },
   note: { fontFamily: font.ui, fontSize: 13.5, lineHeight: 21 },
 });

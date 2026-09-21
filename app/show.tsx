@@ -9,6 +9,7 @@ import { usePalette } from "../src/usePalette";
 import PageGlow from "../src/components/PageGlow";
 import { SHOWS } from "../src/data/media";
 import { addsToTitle, clock, dateLabel, durationLabel, episodesFor, type Episode } from "../src/engine/podcast";
+import GoldRule from "../src/components/GoldRule";
 
 export default function ShowScreen() {
   const c = usePalette();
@@ -82,7 +83,8 @@ export default function ShowScreen() {
         <Pressable onPress={goBack} hitSlop={12} accessibilityRole="button">
           <Text style={[s.back, { color: c.indigo }]}>‹ Back</Text>
         </Pressable>
-        <View style={[s.head, { borderBottomColor: c.giltBright }]}>
+        <View style={[s.head, { borderBottomWidth: 0, paddingBottom: space.sm + 6 }]}>
+          <GoldRule pinned />
           <Text style={[s.title, { color: c.ink }]}>{show.title}</Text>
           <Text style={[label, { color: c.gilt }]}>{show.by}</Text>
         </View>

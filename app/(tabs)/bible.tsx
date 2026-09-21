@@ -7,6 +7,7 @@ import PageGlow from "../../src/components/PageGlow";
 import { readIndex, splitTestaments, useBibleState } from "../../src/bible/store";
 import { font, label, space } from "../../src/theme";
 import { usePalette } from "../../src/usePalette";
+import GoldRule from "../../src/components/GoldRule";
 
 export default function BibleScreen() {
   const c = usePalette();
@@ -31,7 +32,8 @@ export default function BibleScreen() {
       <ScrollView
         contentContainerStyle={[s.page, { paddingTop: insets.top + space.lg, paddingBottom: space.xxl }]}
       >
-        <View style={[s.head, { borderBottomColor: c.giltBright }]}>
+        <View style={[s.head, { borderBottomWidth: 0, paddingBottom: space.sm + 6 }]}>
+          <GoldRule pinned />
           <Text style={[s.title, { color: c.ink }]}>Bible</Text>
           <Pressable onPress={() => router.push("/versions")} hitSlop={10}>
             <Text style={[label, { color: c.indigo }]}>

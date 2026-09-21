@@ -22,6 +22,11 @@ export type Palette = {
   ruleSoft: string;
   rubricWash: string;
   glow: string;
+  /** Tint for the parchment grain, and how strongly it shows. */
+  grain: string;
+  grainOpacity: number;
+  /** The darker end of a gold-leaf gradient. */
+  giltDeep: string;
 };
 
 export const palettes: Record<Scheme, Palette> = {
@@ -40,6 +45,9 @@ export const palettes: Record<Scheme, Palette> = {
     ruleSoft: "#EFE9DA",
     rubricWash: "rgba(168,43,30,0.06)",
     glow: "rgba(201,162,39,0.13)",
+    grain: "#6E5424",
+    grainOpacity: 0.11,
+    giltDeep: "#7A5A10",
   },
   dark: {
     ground: "#131527",
@@ -56,6 +64,9 @@ export const palettes: Record<Scheme, Palette> = {
     ruleSoft: "#242745",
     rubricWash: "rgba(224,121,106,0.14)",
     glow: "rgba(224,188,99,0.10)",
+    grain: "#F3E2B6",
+    grainOpacity: 0.045,
+    giltDeep: "#A8842E",
   },
 };
 

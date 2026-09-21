@@ -26,6 +26,7 @@ import ReportSheet from "../../src/components/ReportSheet";
 import { setConsent, useConsent } from "../../src/store/consent";
 import { font, label, space } from "../../src/theme";
 import { usePalette } from "../../src/usePalette";
+import GoldRule from "../../src/components/GoldRule";
 
 // The screen opens on a worked example rather than an empty shell, so the
 // first thing anyone sees is the thing the app actually does.
@@ -161,7 +162,8 @@ export default function ReadScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* masthead */}
-        <View style={[s.masthead, { borderBottomColor: c.giltBright }]}>
+        <View style={[s.masthead, { borderBottomWidth: 0, paddingBottom: space.md + 6 }]}>
+          <GoldRule pinned />
           <Text style={[s.wordmark, { color: c.ink }]}>He Answers</Text>
           <Text style={[s.epigraph, { color: c.ink2 }]}>
             Call unto me, and I will answer thee, and shew thee great and mighty

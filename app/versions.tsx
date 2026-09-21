@@ -8,6 +8,7 @@ import { TRANSLATIONS, megabytes } from "../src/bible/catalog";
 import { install, remove, setActive, useBibleState } from "../src/bible/store";
 import { font, label, space } from "../src/theme";
 import { usePalette } from "../src/usePalette";
+import GoldRule from "../src/components/GoldRule";
 
 export default function VersionsScreen() {
   const c = usePalette();
@@ -41,7 +42,9 @@ export default function VersionsScreen() {
           <Text style={[s.back, { color: c.ink2 }]}>‹ Back</Text>
         </Pressable>
 
-        <View style={[s.head, { borderBottomColor: c.giltBright }]}>
+        <View style={[s.head, { borderBottomWidth: 0, paddingBottom: space.sm + 6 }]}>
+
+          <GoldRule pinned />
           <Text style={[s.title, { color: c.ink }]}>Translations</Text>
           <Text style={[label, { color: c.gilt }]}>{installed.length} of {TRANSLATIONS.length}</Text>
         </View>
