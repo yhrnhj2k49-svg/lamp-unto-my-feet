@@ -51,3 +51,11 @@ namespace_id = "1004"
   [ratelimits.simple]
   limit = 30
   period = 60
+
+[[ratelimits]]
+name = "FOLLOWUP_LIMIT"
+namespace_id = "1005"
+
+  [ratelimits.simple]
+  limit = 4
+  period = 60

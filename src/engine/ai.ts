@@ -115,7 +115,66 @@ export async function personalLiving(
   return { apply, reflect };
 }
 
-export type ReportKind = "reading" | "living";
+export type Turn = { role: "user" | "assistant"; text: string };
+export type FollowUpReply = { reply: string; passages: Array<Verse & { score: number }> };
+
+/**
+ * Keep going after a reading: a question, "these did not fit", or "go
+ * deeper". The server sees the original situation, the passages already shown
+ * (so none come back), and the conversation so far. Nothing is kept anywhere.
+ */
+export async function followUp(args: {
+  situation: string;
+  feelings: Theme[];
+  shown: string[];
+  history: Turn[];
+  message: string;
+}): Promise<FollowUpReply> {
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(`${ENDPOINT.replace(/\/+$/, "")}/followup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: args.situation,
+        feelings: args.feelings,
+        shown: args.shown,
+        history: args.history,
+        message: args.message,
+      }),
+      signal: abort.signal,
+    });
+  } catch {
+    throw new ReadingError(abort.signal.aborted ? "That took too long." : "Could not reach the reading service.");
+  } finally {
+    clearTimeout(timer);
+  }
+
+  const data = (await res.json().catch(() => ({}))) as Wire & { reply?: unknown };
+  if (!res.ok) throw new ReadingError(str(data.error) || `That failed (${res.status}).`);
+
+  // A reply is a few sentences of prose. Claude sometimes puts a line break
+  // mid-sentence where a dash belonged, which renders as a stray gap; flatten
+  // any run of whitespace so that never shows.
+  const reply = str(data.reply).replace(/\s+/g, " ");
+  if (!reply) throw new ReadingError("It came back empty.");
+  const passages = (data.passages ?? [])
+    .map((p): Verse & { score: number } => ({
+      ref: str(p.ref),
+      text: str(p.text),
+      plain: str(p.plain),
+      why: str(p.why),
+      themes: (Array.isArray(p.themes) ? p.themes : []) as Theme[],
+      score: 0,
+    }))
+    .filter((p) => p.ref && p.text);
+  return { reply, passages };
+}
+
+export type ReportKind = "reading" | "living" | "followup";
 
 /** Report something Claude wrote. Only Claude's words are sent, never the person's own. */
 export async function reportContent(

@@ -23,6 +23,7 @@ import Passage from "../../src/components/Passage";
 import PageGlow from "../../src/components/PageGlow";
 import ConsentSheet from "../../src/components/ConsentSheet";
 import ReportSheet from "../../src/components/ReportSheet";
+import FollowUp from "../../src/components/FollowUp";
 import { setConsent, useConsent } from "../../src/store/consent";
 import { font, label, space } from "../../src/theme";
 import { usePalette } from "../../src/usePalette";
@@ -51,6 +52,9 @@ export default function ReadScreen() {
   const [answeredFeelings, setAnsweredFeelings] = useState<Theme[]>([]);
   const [asking, setAsking] = useState<{ q: string; picked: Theme[]; id: number } | null>(null);
   const [reporting, setReporting] = useState(false);
+  // Permission asked from the follow-up section. Kept apart from `asking` so
+  // saying yes there turns Claude on without paying for the reading twice.
+  const [askingForFollowUp, setAskingForFollowUp] = useState(false);
   const { value: consent } = useConsent();
   const aiOn = aiAvailable && consent === "granted";
 
@@ -118,6 +122,11 @@ export default function ReadScreen() {
   };
 
   const allow = () => {
+    if (askingForFollowUp) {
+      setAskingForFollowUp(false);
+      void setConsent("granted");
+      return;
+    }
     const pending = asking;
     setAsking(null);
     void setConsent("granted");
@@ -125,6 +134,7 @@ export default function ReadScreen() {
   };
 
   const decline = () => {
+    setAskingForFollowUp(false);
     setAsking(null);
     void setConsent("declined");
   };
@@ -325,6 +335,19 @@ export default function ReadScreen() {
           </Pressable>
         ) : null}
 
+        {!isExample && !busy ? (
+          <FollowUp
+            // A fresh thread for each search: nothing carries across.
+            key={answeredKey}
+            situation={answered}
+            feelings={answeredFeelings}
+            shown={shown.passages}
+            aiOn={aiOn}
+            consentDeclined={consent === "declined"}
+            onNeedConsent={() => setAskingForFollowUp(true)}
+          />
+        ) : null}
+
         <Text style={[s.foot, { color: c.ink3, borderTopColor: c.rule }]}>
           King James Version, which is in the public domain.{" "}
           {aiOn
@@ -334,10 +357,13 @@ export default function ReadScreen() {
       </ScrollView>
 
       <ConsentSheet
-        visible={asking !== null}
+        visible={asking !== null || askingForFollowUp}
         onAllow={allow}
         onDecline={decline}
-        onDismiss={() => setAsking(null)}
+        onDismiss={() => {
+          setAsking(null);
+          setAskingForFollowUp(false);
+        }}
       />
       <ReportSheet
         visible={reporting}

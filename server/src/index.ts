@@ -1,9 +1,10 @@
 // The reading server for He Answers.
 //
-// Holds the Anthropic API key so the app never has to. Two routes:
+// Holds the Anthropic API key so the app never has to. Its routes:
 //
 //   POST /         what someone wrote  ->  the four passages that meet it
 //   POST /living   one of those passages  ->  how to live it, in that situation
+//   POST /followup more on a reading: a question, or "these did not fit"  ->  a reply and new passages
 //   POST /report   something Claude wrote was wrong or harmful  ->  kept for review
 //
 // "How to live it" is only written when someone taps for it, so the reading
@@ -30,6 +31,7 @@ export interface Env {
   LIVING_LIMIT?: RateLimit;
   REPORT_LIMIT?: RateLimit;
   PODCAST_LIMIT?: RateLimit;
+  FOLLOWUP_LIMIT?: RateLimit;
   /** Where reports are kept. Absent locally, where they go to the log instead. */
   REPORTS?: KVNamespace;
 }
@@ -42,7 +44,8 @@ const effortFrom = (value?: string): Effort =>
 const MAX_INPUT = 2000;
 const WINDOW_MS = 60 * 60 * 1000;
 // Per IP, per hour. A reading can be followed by a tap on each of its passages.
-const LIMITS = { reading: 20, living: 80, report: 20, podcast: 240 } as const;
+// A follow-up costs what a reading costs, so it gets a reading-sized budget.
+const LIMITS = { reading: 20, living: 80, followup: 40, report: 20, podcast: 240 } as const;
 type Route = keyof typeof LIMITS;
 
 // The concordance as the reading prompt shows it, and as /living looks it up.
@@ -69,6 +72,11 @@ const LivingSchema = z.object({
   reflect: z.string().describe("One open question to sit with, ending in a question mark"),
 });
 
+const FollowUpSchema = z.object({
+  reply: z.string().describe("Two to five sentences answering what they just said"),
+  passages: z.array(Passage).describe("Zero to three NEW passages, only if they help; never one already shown"),
+});
+
 /* ---------- prompts ---------- */
 
 const READING_SYSTEM = `You are a scripture concordance for someone who has just written down what they are going through. You choose the passages that meet it, and you say why in their terms.
@@ -88,6 +96,30 @@ WRITING
 - Address the person as "you". Never assume their gender, age or circumstances beyond what they wrote: "my wife" does not tell you who is writing.
 - Never invent a citation. Never blend two passages into one quotation.
 - Do not tell them what God is doing in their life. Set out the passage and let it speak.
+
+CONCORDANCE (${PASSAGES.length} passages, KJV)
+${CORPUS}`;
+
+const FOLLOWUP_SYSTEM = `You are continuing a conversation with someone who wrote down what they are going through and was given passages of scripture for it. They want to keep going: the passages may not have fit, they may want to go deeper, or they may have a question.
+
+HOW TO REPLY
+- Two to five sentences, warm and plain, addressed to them as "you". Answer what they actually said just now; the earlier conversation is context, not the question.
+- Write continuous prose. No line breaks, no lists, no headings. Where a sentence needs a break in thought, use a dash or a comma, never a new line.
+- If they say the passages did not fit, take that seriously. Say briefly what was missed, and offer different passages.
+- If they want to go deeper, stay with what they wrote and open one passage further: its setting, a word in it, how it has been read.
+- If they ask a question about the Bible or faith, answer it honestly. Where Christian traditions genuinely disagree, say so plainly instead of presenting one view as settled.
+- If they ask for something unrelated to scripture, faith, or what they are carrying, say kindly that this is a place for that, and bring it back.
+
+PASSAGES
+- Offer up to three new passages, only when they help. Offering none is fine.
+- Never repeat a passage already shown to them; those are listed with the conversation.
+- Quote the King James Version exactly. Prefer the concordance below and quote its text verbatim. Go outside it only when certain of the wording; a misquoted verse is worse than none.
+
+LIMITS
+- You are not a counsellor, doctor, lawyer, or pastor. When someone needs one, say so gently and encourage them to reach a person they trust.
+- If anything suggests they may be in danger, tell them first, before anything else, to contact emergency services now, or call or text 988 in the US.
+- Do not speak for God, do not claim to know God's particular will for their life, and do not tell them what God is doing in it.
+- Never assume their gender, age, or circumstances beyond what they wrote. "My wife" or "my husband" does not tell you who is writing: do not call them a man or a woman, a father or a mother, a husband or a wife.
 
 CONCORDANCE (${PASSAGES.length} passages, KJV)
 ${CORPUS}`;
@@ -156,6 +188,7 @@ async function limited(env: Env, route: Route, ip: string): Promise<boolean> {
     living: env.LIVING_LIMIT,
     report: env.REPORT_LIMIT,
     podcast: env.PODCAST_LIMIT,
+    followup: env.FOLLOWUP_LIMIT,
   }[route];
   if (binding && !(await binding.limit({ key: ip })).success) return true;
   return overLimit(`${ip}:${route}`, LIMITS[route]);
@@ -256,13 +289,76 @@ async function living(input: Input, env: Env, client: Anthropic): Promise<Respon
   }
 }
 
+const MAX_TURNS = 16; // eight exchanges
+const MAX_TURN = 1200;
+
+async function followUp(input: Input, env: Env, client: Anthropic): Promise<Response> {
+  const text = str(input.text, MAX_INPUT);
+  const feelings = list(input.feelings);
+  const message = str(input.message, MAX_INPUT);
+  if (!message) return json({ error: "Nothing to answer." }, 400);
+
+  const shown = Array.isArray(input.shown)
+    ? input.shown.filter((x): x is string => typeof x === "string").map((x) => x.trim().slice(0, 80)).slice(0, 40)
+    : [];
+  const history = (Array.isArray(input.history) ? input.history : [])
+    .filter(
+      (h): h is { role: "user" | "assistant"; text: string } =>
+        !!h && typeof h === "object" && (h.role === "user" || h.role === "assistant") && typeof h.text === "string"
+    )
+    .slice(-MAX_TURNS)
+    .map((h) => ({ role: h.role, text: h.text.trim().slice(0, MAX_TURN) }));
+
+  const context = [
+    situation(text, feelings),
+    `Passages already shown to them: ${shown.length ? shown.join("; ") : "(none)"}`,
+    history.length
+      ? `The conversation so far:\n${history.map((h) => `${h.role === "user" ? "They said" : "You said"}: ${h.text}`).join("\n")}`
+      : "",
+    `What they just said: ${message}`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  try {
+    const response = await client.messages.parse({
+      model: "claude-opus-5",
+      max_tokens: 16000,
+      thinking: { type: "adaptive" },
+      output_config: { effort: effortFrom(env.READING_EFFORT), format: zodOutputFormat(FollowUpSchema) },
+      system: [{ type: "text", text: FOLLOWUP_SYSTEM, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: context }],
+    });
+
+    if (response.stop_reason === "refusal") return json({ error: "That could not be answered." }, 422);
+    const parsed = response.parsed_output;
+    if (!parsed?.reply) return json({ error: "It came back empty." }, 502);
+
+    // Belt and braces on the two promises the prompt makes: nothing already
+    // shown comes back, and a passage the app carries is quoted from the app's
+    // own checked text rather than from memory.
+    const seen = new Set(shown.map((r) => r.toLowerCase()));
+    const passages = parsed.passages
+      .filter((p) => p.ref && p.text && !seen.has(p.ref.trim().toLowerCase()))
+      .slice(0, 3)
+      .map((p) => {
+        const own = BY_REF.get(p.ref.trim());
+        return own ? { ...p, ref: own.ref, text: own.text } : p;
+      });
+
+    return json(cleanStrings({ reply: parsed.reply, passages }));
+  } catch (error) {
+    return failure(error);
+  }
+}
+
 const REASONS = new Set(["harmful", "misleading", "misquote", "other"]);
 const REPORT_DAYS = 90;
 
 // Google Play requires a way to report AI-generated content from inside the app.
 // The app sends only Claude's words and a reason, never what the person wrote.
 async function report(input: Input, env: Env): Promise<Response> {
-  const kind = input.kind === "reading" || input.kind === "living" ? input.kind : null;
+  const kind = input.kind === "reading" || input.kind === "living" || input.kind === "followup" ? input.kind : null;
   const reason = str(input.reason, 20);
   if (!kind || !REASONS.has(reason)) return json({ error: "That report is missing its reason." }, 400);
 
@@ -307,7 +403,13 @@ export default {
     if (declared > MAX_BODY) return json({ error: "That is too large to read." }, 413);
 
     const path = new URL(req.url).pathname.replace(/\/+$/, "");
-    const route: Route = path.endsWith("/living") ? "living" : path.endsWith("/report") ? "report" : "reading";
+    const route: Route = path.endsWith("/living")
+      ? "living"
+      : path.endsWith("/followup")
+        ? "followup"
+        : path.endsWith("/report")
+          ? "report"
+          : "reading";
 
     if (await limited(env, route, ip)) {
       return json({ error: "Too many requests. Try again later." }, 429);
@@ -337,6 +439,7 @@ export default {
     }
 
     const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+    if (route === "followup") return followUp(input, env, client);
     return route === "living" ? living(input, env, client) : reading(input, env, client);
   },
 };
