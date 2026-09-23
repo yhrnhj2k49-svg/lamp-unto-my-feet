@@ -23,8 +23,10 @@ import Passage from "../../src/components/Passage";
 import PageGlow from "../../src/components/PageGlow";
 import ConsentSheet from "../../src/components/ConsentSheet";
 import ReportSheet from "../../src/components/ReportSheet";
+import VersionSheet from "../../src/components/VersionSheet";
 import FollowUp from "../../src/components/FollowUp";
 import { setConsent, useConsent } from "../../src/store/consent";
+import { useVersion } from "../../src/store/version";
 import { font, label, space } from "../../src/theme";
 import { usePalette } from "../../src/usePalette";
 import GoldRule from "../../src/components/GoldRule";
@@ -55,7 +57,9 @@ export default function ReadScreen() {
   // Permission asked from the follow-up section. Kept apart from `asking` so
   // saying yes there turns Claude on without paying for the reading twice.
   const [askingForFollowUp, setAskingForFollowUp] = useState(false);
+  const [choosingVersion, setChoosingVersion] = useState(false);
   const { value: consent } = useConsent();
+  const { value: version } = useVersion();
   const aiOn = aiAvailable && consent === "granted";
 
   // Every search is numbered, and only the newest may update the screen. A
@@ -260,6 +264,17 @@ export default function ReadScreen() {
           </Text>
         </View>
 
+        <Pressable
+          onPress={() => setChoosingVersion(true)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`Passages shown in ${version}. Choose a translation.`}
+          style={s.versionRow}
+        >
+          <Text style={[label, { color: c.ink3 }]}>Passages in </Text>
+          <Text style={[s.versionPick, { color: c.indigo, borderBottomColor: c.rule }]}>{version}</Text>
+        </Pressable>
+
         {answered ? (
           <Text style={[s.answered, { color: c.ink3 }]}>
             You wrote: <Text style={[s.answeredQuote, { color: c.ink2 }]}>{answered}</Text>
@@ -349,7 +364,8 @@ export default function ReadScreen() {
         ) : null}
 
         <Text style={[s.foot, { color: c.ink3, borderTopColor: c.rule }]}>
-          King James Version, which is in the public domain.{" "}
+          {version === "KJV" ? "King James Version" : `${version}, chosen for passages`}, in the
+          public domain.{" "}
           {aiOn
             ? "What you write is sent to Claude so it can choose passages for you. This app keeps no copy. If Claude cannot be reached, passages are matched on this phone."
             : "Passages are matched on this phone. Nothing you write is sent anywhere."}
@@ -365,6 +381,7 @@ export default function ReadScreen() {
           setAskingForFollowUp(false);
         }}
       />
+      <VersionSheet visible={choosingVersion} onClose={() => setChoosingVersion(false)} />
       <ReportSheet
         visible={reporting}
         onClose={() => setReporting(false)}
@@ -405,6 +422,8 @@ const s = StyleSheet.create({
   resTitle: { fontFamily: font.display, fontSize: 21 },
   method: { borderWidth: 1, borderRadius: 1, paddingHorizontal: 6, paddingVertical: 3 },
 
+  versionRow: { flexDirection: "row", alignItems: "baseline", marginTop: space.sm },
+  versionPick: { fontFamily: font.uiSemi, fontSize: 12.5, letterSpacing: 0.6, borderBottomWidth: 1, paddingBottom: 1 },
   answered: { fontFamily: font.ui, fontSize: 12.5, lineHeight: 20, marginTop: space.md },
   answeredQuote: { fontFamily: font.serifItalic, fontSize: 14 },
 

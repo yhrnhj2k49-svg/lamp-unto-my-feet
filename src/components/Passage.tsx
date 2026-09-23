@@ -9,6 +9,7 @@ import type { Theme, Verse } from "../data/verses";
 import { livingFor } from "../data/living";
 import Living from "./Living";
 import Illuminated from "./Illuminated";
+import { usePassageText } from "../bible/usePassageText";
 import Fleuron from "./Fleuron";
 
 type Props = {
@@ -32,6 +33,7 @@ function PassageCard({ verse, theme, first, personalize }: Props) {
   const wide = useWindowDimensions().width >= 700;
   const own = livingFor(verse.ref);
   const [personal, setPersonal] = useState<Personal | null>(null);
+  const shownText = usePassageText(verse.ref, verse.text);
 
   // Only a passage kept from this card takes on the words written here. One
   // kept from an earlier reading keeps the words written for that reading.
@@ -63,6 +65,7 @@ function PassageCard({ verse, theme, first, personalize }: Props) {
     >
       <View style={[s.margin, wide && s.marginWide]}>
         <Text style={[s.ref, { color: c.ink }]}>{verse.ref}</Text>
+        <Text style={[label, { color: c.ink3 }]}>{shownText.version}</Text>
         {theme ? <Text style={[label, s.theme, { color: c.gilt }]}>{theme}</Text> : null}
         <Pressable
           onPress={onKeep}
@@ -83,7 +86,7 @@ function PassageCard({ verse, theme, first, personalize }: Props) {
       </View>
 
       <View style={s.body}>
-        <Illuminated text={verse.text} />
+        <Illuminated text={shownText.text} />
 
         <View style={s.notes}>
           <Text style={[s.note, { color: c.ink2 }]}>

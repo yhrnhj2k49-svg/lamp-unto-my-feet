@@ -33,7 +33,7 @@ HOW TO LIVE IT
 Every passage opens into three parts: the setting (who wrote it, to whom, and what was happening), what it asks of you, and a question to sit with.
 
 SCRIPTURE AS PRINTED
-Passages are the King James Version, checked word for word against the complete text, each with a plain-English reading beside it.
+Passages are the King James Version, checked word for word against the complete text, each with a plain-English reading beside it. Prefer another translation? Have passages shown in any of nine you can download, taken from that translation's own text.
 
 PRIVATE BY CHOICE
 No account, no ads, no tracking. The app asks before anything you write is sent. Say no, and passages are matched on your phone instead, with nothing leaving it.

@@ -8,7 +8,15 @@ import PageGlow from "../../src/components/PageGlow";
 import Living from "../../src/components/Living";
 import { livingFor } from "../../src/data/living";
 import Illuminated from "../../src/components/Illuminated";
+import { usePassageText } from "../../src/bible/usePassageText";
 import GoldRule from "../../src/components/GoldRule";
+
+// A kept passage is stored as the King James text it was kept as; it is shown
+// in whichever translation is currently chosen, like everywhere else.
+function KeptText({ ref_, text }: { ref_: string; text: string }) {
+  const shown = usePassageText(ref_, text);
+  return <Illuminated text={shown.text} size={18.5} lineHeight={30} />;
+}
 
 export default function KeptScreen() {
   const c = usePalette();
@@ -58,7 +66,7 @@ export default function KeptScreen() {
                 <Text style={[s.drop, { color: c.ink3, borderBottomColor: c.rule }]}>Remove</Text>
               </Pressable>
             </View>
-            <Illuminated text={k.text} size={18.5} lineHeight={30} />
+            <KeptText ref_={k.ref} text={k.text} />
             <Text style={[s.note, { color: c.ink2 }]}>
               <Text style={[label, { color: c.gilt }]}>In plain words  </Text>
               {k.plain}

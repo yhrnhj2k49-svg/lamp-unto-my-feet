@@ -134,10 +134,13 @@ export default function AboutScreen() {
 
       <Section title="The text">
         <P>
-          Passages are the King James Version, which is in the public domain. The plain
-          reading beside each one is a paraphrase written for this app, not a translation
-          — where the two differ, the scripture is what counts. Check anything that
-          matters against your own Bible.
+          Passages are the King James Version, which is in the public domain. You can have
+          them shown in any translation you have downloaded — tap the translation name above
+          the passages on the Read tab. The words then come from that translation's own text,
+          never rewritten, and it says which one you are reading. The plain reading beside
+          each one is a paraphrase written for this app, not a translation — where the two
+          differ, the scripture is what counts. Check anything that matters against your own
+          Bible.
         </P>
       </Section>
 
