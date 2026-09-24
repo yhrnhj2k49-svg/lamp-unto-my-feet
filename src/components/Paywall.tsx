@@ -8,23 +8,23 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import Sheet from "./Sheet";
 import Fleuron from "./Fleuron";
 import { FREE_PER_MONTH, useQuota } from "../store/quota";
-import { useEntitlement } from "../billing/entitlement";
+import { PRODUCTS, useEntitlement } from "../billing/entitlement";
+import { useBilling } from "../billing/purchases";
 import { font, label, space } from "../theme";
 import { usePalette } from "../usePalette";
 
 export default function Paywall({
   visible,
   onClose,
-  onBuy,
 }: {
   visible: boolean;
   onClose: () => void;
-  /** Absent until a store is wired in. */
-  onBuy?: (product: "monthly" | "yearly") => void;
 }) {
   const c = usePalette();
   const { used } = useQuota();
   const { canBuy } = useEntitlement();
+  const billing = useBilling();
+  const priceOf = (id: string) => billing.subscriptions.find((p) => p.id === id)?.price ?? "";
 
   return (
     <Sheet visible={visible} label="Readings this month" onDismiss={onClose}>
@@ -43,21 +43,25 @@ export default function Paywall({
         anywhere.
       </Text>
 
-      {canBuy && onBuy ? (
+      {canBuy ? (
         <View style={s.buttons}>
           <Pressable
-            onPress={() => onBuy("yearly")}
+            onPress={() => void billing.buy(PRODUCTS.yearly)}
             accessibilityRole="button"
             style={[s.btn, { backgroundColor: c.ink, borderColor: c.ink }]}
           >
-            <Text style={[s.btnText, { color: c.ground }]}>Unlimited readings — yearly</Text>
+            <Text style={[s.btnText, { color: c.ground }]}>
+              Unlimited readings — yearly {priceOf(PRODUCTS.yearly)}
+            </Text>
           </Pressable>
           <Pressable
-            onPress={() => onBuy("monthly")}
+            onPress={() => void billing.buy(PRODUCTS.monthly)}
             accessibilityRole="button"
             style={[s.btn, { borderColor: c.rule }]}
           >
-            <Text style={[s.btnText, { color: c.ink }]}>Unlimited readings — monthly</Text>
+            <Text style={[s.btnText, { color: c.ink }]}>
+              Unlimited readings — monthly {priceOf(PRODUCTS.monthly)}
+            </Text>
           </Pressable>
         </View>
       ) : (
@@ -70,6 +74,14 @@ export default function Paywall({
       <Pressable onPress={onClose} accessibilityRole="button" style={[s.btn, { borderColor: c.rule }]}>
         <Text style={[s.btnText, { color: c.ink }]}>Keep reading on this phone</Text>
       </Pressable>
+
+      {canBuy ? (
+        <Pressable onPress={() => void billing.restore()} accessibilityRole="button" hitSlop={8}>
+          <Text style={[s.small, { color: c.indigo, textDecorationLine: "underline" }]}>
+            Already subscribed? Restore it
+          </Text>
+        </Pressable>
+      ) : null}
 
       <Text style={[s.small, { color: c.ink3 }]}>
         If you are in danger, nothing here is counted or blocked.

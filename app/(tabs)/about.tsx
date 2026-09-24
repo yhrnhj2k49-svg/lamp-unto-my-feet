@@ -5,6 +5,9 @@ import { CRISIS_NOTE } from "../../src/engine/safety";
 import { aiAvailable } from "../../src/engine/ai";
 import { setConsent, useConsent } from "../../src/store/consent";
 import { PRIVACY_URL, SUPPORT_URL, TERMS_URL } from "../../src/links";
+import { useBilling } from "../../src/billing/purchases";
+import { FREE_PER_MONTH, useQuota } from "../../src/store/quota";
+import { useEntitlement } from "../../src/billing/entitlement";
 import { font, label, space } from "../../src/theme";
 import { usePalette } from "../../src/usePalette";
 import PageGlow from "../../src/components/PageGlow";
@@ -21,6 +24,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function AboutScreen() {
+  const billing = useBilling();
+  const { used } = useQuota();
+  const { plan } = useEntitlement();
   const c = usePalette();
   const insets = useSafeAreaInsets();
   const { value: consent } = useConsent();
@@ -130,6 +136,30 @@ export default function AboutScreen() {
         </P>
         <A onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})}>Read the privacy policy</A>
         <A onPress={() => Linking.openURL(TERMS_URL).catch(() => {})}>Read the terms of use</A>
+      </Section>
+
+      <Section title="Readings">
+        <P>
+          {plan === "unlimited"
+            ? "You have unlimited readings. Thank you for paying for this — it is what keeps the app running."
+            : `Claude has written ${used} of your ${FREE_PER_MONTH} readings this month. Everything the phone does by itself — matching passages, the whole Bible, Watch and Listen — is free and unmetered.`}
+        </P>
+        {billing.tips.length > 0 ? (
+          <>
+            <P>
+              If the app has been worth something to you, you can put something toward what it
+              costs to run. Nothing changes in the app if you do; it is a thank you, not a purchase.
+            </P>
+            {billing.tips.map((t) => (
+              <A key={t.id} onPress={() => void billing.buy(t.id)}>
+                {`Support the app — ${t.price || t.title}`}
+              </A>
+            ))}
+          </>
+        ) : null}
+        {billing.canBuy ? (
+          <A onPress={() => void billing.restore()}>Restore a purchase</A>
+        ) : null}
       </Section>
 
       <Section title="The text">

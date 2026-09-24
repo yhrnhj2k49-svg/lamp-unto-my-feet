@@ -24,6 +24,7 @@ import { hydrateBibles } from "../src/bible/store";
 import { hydrateConsent } from "../src/store/consent";
 import { hydrateVersion } from "../src/store/version";
 import { hydrateQuota } from "../src/store/quota";
+import { BillingProvider } from "../src/billing/purchases";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -59,7 +60,9 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar style="auto" />
-      <Stack screenOptions={{ headerShown: false }} />
+      <BillingProvider>
+        <Stack screenOptions={{ headerShown: false }} />
+      </BillingProvider>
     </SafeAreaProvider>
   );
 }
