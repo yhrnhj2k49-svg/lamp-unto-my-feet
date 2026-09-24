@@ -200,3 +200,37 @@ an episode. Browsing the lists sends nothing to either.
   in the form, and answer against what the app actually does.
 - **Terms of use** are linked from the consent sheet and About, and live at
   the URL above. They are drafted, not reviewed by a lawyer.
+
+
+---
+
+# App Store — assets and the order to do it in
+
+Apple has no closed-testing requirement: an app can go straight to review,
+usually 24-48 hours. So iOS can reach the store before Android does.
+
+| Asset | Spec | Status |
+|---|---|---|
+| iPhone 6.9" screenshots | 1290 x 2796 px | `store/appstore/screenshots/` (5) |
+| App icon | taken from the build itself | in the app |
+| Name / subtitle / keywords / description | see the tables above | written |
+| Privacy policy URL | required | live |
+| Terms of use URL | optional here; Apple's standard EULA also applies | live |
+
+Apple needs only one screenshot size (6.9"); it scales them for smaller
+iPhones. If you also want an iPad listing, that needs its own set, so leave
+iPad off until you want to support it properly.
+
+## Order
+
+1. Accept the App Store Connect Terms of Service (one click, once).
+2. Create the app record: name **He Answers**, bundle **com.heanswers.app**,
+   primary language English (U.S.), SKU anything stable (e.g. `heanswers-001`).
+3. Upload the build with `eas submit -p ios`, or let App Store Connect pull it.
+4. Fill App Privacy: see the "Apple — App Privacy" section above, plus the
+   note on the YouTube embed.
+5. Age rating: answer honestly, including the supportive reference to suicide
+   (crisis helplines). Expect 12+.
+6. Paste the reviewer notes from "Notes for Apple's reviewer" above. An AI app
+   that hides its permission sheet and its reporting is what gets rejected.
+7. Submit. Apple emails at each stage.
