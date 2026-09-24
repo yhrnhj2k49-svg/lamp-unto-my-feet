@@ -29,7 +29,7 @@ const GLOW = `
     <stop offset="66%" stop-color="#F5BC58" stop-opacity="0.12"/>
     <stop offset="100%" stop-color="#F5BC58" stop-opacity="0"/>
   </radialGradient>`;
-const FLAME = `
+const FIRE = `
   <linearGradient id="flame" x1="0" y1="0" x2="0" y2="1">
     <stop offset="0%" stop-color="#FFFDF0"/><stop offset="28%" stop-color="#FFEFC0"/>
     <stop offset="60%" stop-color="#FBD378"/><stop offset="100%" stop-color="#E8AE3C"/>
@@ -41,41 +41,56 @@ const DEEP = `
     <stop offset="100%" stop-color="#9A7216"/>
   </linearGradient>`;
 
-// Teardrop: pointed apex, full round belly, no straight edges.
-const flame = (cx, topY, w, botY) => {
-  const r = w / 2;
-  const cy = botY - r;
-  return `M${cx} ${topY} C ${cx + w * 0.62} ${topY + (cy - topY) * 0.52}, ${cx + r} ${cy - r * 0.62}, ${cx + r} ${cy} a ${r} ${r} 0 0 1 ${-w} 0 c 0 ${-r * 0.62}, ${w * 0.06} ${-(cy - topY) * 0.48}, ${w * 0.5} ${-(cy - topY)} Z`;
-};
+const CORE_G = `
+  <linearGradient id="core" x1="0.5" y1="0" x2="0.5" y2="1">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+    <stop offset="60%" stop-color="#FFF6D8" stop-opacity="0.85"/>
+    <stop offset="100%" stop-color="#CFE0FF" stop-opacity="0.55"/>
+  </linearGradient>`;
 
-// Full bleed, for the app icon.
-const BIG = flame(512, 150, 420, 872);
-// Android keeps adaptive-icon artwork inside a 676px centre circle; this one
-// is 330 x 560, a 650px diagonal, so it clears the mask in every shape.
-const SAFE = flame(512, 240, 330, 800);
+// A flame that flickers, rather than a teardrop. The old shape was
+// symmetrical, which reads as water; this one leans, hooks at the tip and
+// carries one shoulder fuller than the other. The inner core is white-hot with
+// a touch of cool blue at its base, where a real flame is coolest.
+//
+// Drawn once at full size; the adaptive and splash variants scale it down and
+// re-centre it, since the flame's own centre sits above the canvas centre.
+const FLAME = `M523 168 C 516 300 592 336 618 430 C 660 585 592 700 512 700
+  C 424 700 366 596 400 486 C 424 406 470 380 492 316
+  C 506 274 504 222 523 168 Z`;
+const CORE = `M519 366 C 512 436 560 460 570 522 C 582 596 552 646 508 646
+  C 466 646 438 596 452 540 C 466 484 508 452 519 366 Z`;
+
+// Bounding box is 366..660 x 168..700 — a 608px diagonal, inside Android's
+// 676px safe circle once re-centred.
+const flame = (fill, core) => `<path d="${FLAME}" fill="${fill}"/>${core ? `<path d="${CORE}" fill="${core}"/>` : ""}`;
+// Nudged down so the shape sits on the canvas centre rather than above it.
+const centred = (scale, fill, core) =>
+  `<g transform="translate(512 512) scale(${scale}) translate(-512 -434)">${flame(fill, core)}</g>`;
 
 const svg = (defs, body) =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><defs>${defs}</defs>${body}</svg>`;
 
 const files = {
   "icon.png": svg(
-    NIGHT + GLOW + FLAME,
+    NIGHT + GLOW + FIRE + CORE_G,
     `<rect width="1024" height="1024" fill="url(#night)"/>
-     <circle cx="512" cy="546" r="500" fill="url(#glow)"/>
-     <path d="${BIG}" fill="url(#flame)"/>`
+     <circle cx="512" cy="520" r="470" fill="url(#glow)"/>
+     ${flame("url(#flame)", "url(#core)")}`
   ),
   // Adaptive background and foreground are parallaxed apart by the system,
   // so the ground and its glow stay on the background layer.
   "android-icon-background.png": svg(
     NIGHT + GLOW,
     `<rect width="1024" height="1024" fill="url(#night)"/>
-     <circle cx="512" cy="546" r="500" fill="url(#glow)"/>`
+     <circle cx="512" cy="520" r="470" fill="url(#glow)"/>`
   ),
-  "android-icon-foreground.png": svg(FLAME, `<path d="${SAFE}" fill="url(#flame)"/>`),
-  "android-icon-monochrome.png": svg("", `<path d="${SAFE}" fill="#FFFFFF"/>`),
+  "android-icon-foreground.png": svg(FIRE + CORE_G, centred(0.82, "url(#flame)", "url(#core)")),
+  // Themed icons are a single flat colour: the core would be invisible.
+  "android-icon-monochrome.png": svg("", centred(0.82, "#FFFFFF", null)),
   // Splash marks sit on the theme's own background.
-  "splash-icon.png": svg(DEEP, `<path d="${SAFE}" fill="url(#flame)"/>`),
-  "splash-icon-dark.png": svg(FLAME, `<path d="${SAFE}" fill="url(#flame)"/>`),
+  "splash-icon.png": svg(DEEP, centred(0.82, "url(#flame)", null)),
+  "splash-icon-dark.png": svg(FIRE + CORE_G, centred(0.82, "url(#flame)", "url(#core)")),
 };
 
 const out = process.argv[2] ?? "assets";
