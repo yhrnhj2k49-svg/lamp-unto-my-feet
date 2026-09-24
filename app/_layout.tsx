@@ -23,6 +23,7 @@ import { hydrate } from "../src/store/kept";
 import { hydrateBibles } from "../src/bible/store";
 import { hydrateConsent } from "../src/store/consent";
 import { hydrateVersion } from "../src/store/version";
+import { hydrateQuota } from "../src/store/quota";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -46,6 +47,7 @@ export default function RootLayout() {
     void hydrateBibles();
     void hydrateConsent();
     void hydrateVersion();
+    void hydrateQuota();
   }, []);
 
   useEffect(() => {

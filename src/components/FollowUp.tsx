@@ -8,6 +8,8 @@ import * as Haptics from "expo-haptics";
 import { followUp, ReadingError, type Turn } from "../engine/ai";
 import { findPassages } from "../engine/match";
 import { CRISIS_NOTE, needsCrisisNote } from "../engine/safety";
+import { countOne, hasFreeLeft } from "../store/quota";
+import { isUnlimited } from "../billing/entitlement";
 import type { Theme, Verse } from "../data/verses";
 import { font, label, space } from "../theme";
 import { usePalette } from "../usePalette";
@@ -36,6 +38,7 @@ export default function FollowUp({
   aiOn,
   consentDeclined,
   onNeedConsent,
+  onOutOfReadings,
 }: {
   situation: string;
   feelings: Theme[];
@@ -44,6 +47,8 @@ export default function FollowUp({
   consentDeclined: boolean;
   /** Opens the same permission sheet the first reading uses. */
   onNeedConsent: () => void;
+  /** The month's free readings are gone; the screen above shows why. */
+  onOutOfReadings: () => void;
 }) {
   const c = usePalette();
   const [thread, setThread] = useState<Entry[]>([]);
@@ -96,6 +101,15 @@ export default function FollowUp({
       onNeedConsent();
       return;
     }
+
+    // Same rule as a reading: danger is never counted or blocked; otherwise a
+    // follow-up spends one of the month's free answers.
+    const urgent = needsCrisisNote(message);
+    if (!urgent && !isUnlimited() && !hasFreeLeft()) {
+      onOutOfReadings();
+      return;
+    }
+    if (!urgent && !isUnlimited()) countOne();
 
     const asked = history();
     const refs = seenRefs();

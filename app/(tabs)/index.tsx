@@ -24,9 +24,12 @@ import PageGlow from "../../src/components/PageGlow";
 import ConsentSheet from "../../src/components/ConsentSheet";
 import ReportSheet from "../../src/components/ReportSheet";
 import VersionSheet from "../../src/components/VersionSheet";
+import Paywall from "../../src/components/Paywall";
 import FollowUp from "../../src/components/FollowUp";
 import { setConsent, useConsent } from "../../src/store/consent";
 import { useVersion } from "../../src/store/version";
+import { countOne, hasFreeLeft } from "../../src/store/quota";
+import { isUnlimited } from "../../src/billing/entitlement";
 import { font, label, space } from "../../src/theme";
 import { usePalette } from "../../src/usePalette";
 import GoldRule from "../../src/components/GoldRule";
@@ -58,6 +61,7 @@ export default function ReadScreen() {
   // saying yes there turns Claude on without paying for the reading twice.
   const [askingForFollowUp, setAskingForFollowUp] = useState(false);
   const [choosingVersion, setChoosingVersion] = useState(false);
+  const [outOfReadings, setOutOfReadings] = useState(false);
   const { value: consent } = useConsent();
   const { value: version } = useVersion();
   const aiOn = aiAvailable && consent === "granted";
@@ -146,6 +150,13 @@ export default function ReadScreen() {
   // Claude reads it more closely and replaces the phone's match when done. If
   // that fails, the phone's match simply stays.
   const readWithClaude = async (q: string, picked: Theme[], id: number) => {
+    // Someone who may be in danger is never counted and never stopped.
+    const urgent = needsCrisisNote(q);
+    if (!urgent && !isUnlimited() && !hasFreeLeft()) {
+      setOutOfReadings(true);
+      return;
+    }
+    if (!urgent && !isUnlimited()) countOne();
     setBusy(true);
     try {
       const closer = await closerReading(q, picked);
@@ -360,6 +371,7 @@ export default function ReadScreen() {
             aiOn={aiOn}
             consentDeclined={consent === "declined"}
             onNeedConsent={() => setAskingForFollowUp(true)}
+            onOutOfReadings={() => setOutOfReadings(true)}
           />
         ) : null}
 
@@ -382,6 +394,7 @@ export default function ReadScreen() {
         }}
       />
       <VersionSheet visible={choosingVersion} onClose={() => setChoosingVersion(false)} />
+      <Paywall visible={outOfReadings} onClose={() => setOutOfReadings(false)} />
       <ReportSheet
         visible={reporting}
         onClose={() => setReporting(false)}
