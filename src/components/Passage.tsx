@@ -10,7 +10,10 @@ import { livingFor } from "../data/living";
 import Living from "./Living";
 import Illuminated from "./Illuminated";
 import { usePassageText } from "../bible/usePassageText";
+import { useConsent } from "../store/consent";
+import { aiAvailable } from "../engine/ai";
 import Fleuron from "./Fleuron";
+import Closer from "./Closer";
 
 type Props = {
   verse: Verse;
@@ -34,6 +37,11 @@ function PassageCard({ verse, theme, first, personalize }: Props) {
   const own = livingFor(verse.ref);
   const [personal, setPersonal] = useState<Personal | null>(null);
   const shownText = usePassageText(verse.ref, verse.text);
+  const [looking, setLooking] = useState(false);
+  // The word study depends on Claude being on at all, not on where this
+  // passage came from — a kept passage deserves the same depth.
+  const { value: consent } = useConsent();
+  const aiOn = aiAvailable && consent === "granted";
 
   // Only a passage kept from this card takes on the words written here. One
   // kept from an earlier reading keeps the words written for that reading.
@@ -99,6 +107,26 @@ function PassageCard({ verse, theme, first, personalize }: Props) {
           </Text>
         </View>
 
+        <Pressable
+          onPress={() => {
+            Haptics.selectionAsync().catch(() => {});
+            setLooking(true);
+          }}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`Look closer at ${verse.ref}: other translations and what the words mean`}
+        >
+          <Text style={[label, s.closer, { color: c.indigo }]}>Look closer</Text>
+        </Pressable>
+
+        <Closer
+          visible={looking}
+          onClose={() => setLooking(false)}
+          ref_={verse.ref}
+          text={verse.text}
+          aiOn={aiOn}
+        />
+
         <Living
           setting={verse.setting || own?.setting}
           apply={verse.apply || own?.apply}
@@ -128,6 +156,7 @@ const s = StyleSheet.create({
   theme: {},
   keep: { fontFamily: font.ui, fontSize: 12, letterSpacing: 0.5, borderBottomWidth: 1, paddingBottom: 1 },
   notes: { marginTop: space.md, gap: space.sm },
+  closer: { marginTop: space.md, textDecorationLine: "underline" },
   note: { fontFamily: font.ui, fontSize: 13.5, lineHeight: 21 },
 });
 

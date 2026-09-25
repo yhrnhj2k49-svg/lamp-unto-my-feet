@@ -5,6 +5,7 @@
 //   POST /         what someone wrote  ->  the four passages that meet it
 //   POST /living   one of those passages  ->  how to live it, in that situation
 //   POST /followup more on a reading: a question, or "these did not fit"  ->  a reply and new passages
+//   POST /word     a word tapped in a verse  ->  what it means, and the word behind it
 //   POST /report   something Claude wrote was wrong or harmful  ->  kept for review
 //
 // "How to live it" is only written when someone taps for it, so the reading
@@ -32,6 +33,7 @@ export interface Env {
   REPORT_LIMIT?: RateLimit;
   PODCAST_LIMIT?: RateLimit;
   FOLLOWUP_LIMIT?: RateLimit;
+  WORD_LIMIT?: RateLimit;
   /** Where reports are kept. Absent locally, where they go to the log instead. */
   REPORTS?: KVNamespace;
 }
@@ -45,7 +47,7 @@ const MAX_INPUT = 2000;
 const WINDOW_MS = 60 * 60 * 1000;
 // Per IP, per hour. A reading can be followed by a tap on each of its passages.
 // A follow-up costs what a reading costs, so it gets a reading-sized budget.
-const LIMITS = { reading: 20, living: 80, followup: 40, report: 20, podcast: 240 } as const;
+const LIMITS = { reading: 20, living: 80, followup: 40, word: 120, report: 20, podcast: 240 } as const;
 type Route = keyof typeof LIMITS;
 
 // The concordance as the reading prompt shows it, and as /living looks it up.
@@ -75,6 +77,13 @@ const LivingSchema = z.object({
 const FollowUpSchema = z.object({
   reply: z.string().describe("Two to five sentences answering what they just said"),
   passages: z.array(Passage).describe("Zero to three NEW passages, only if they help; never one already shown"),
+});
+
+const WordSchema = z.object({
+  plain: z.string().describe("What the word means in THIS verse, one or two plain sentences"),
+  original: z.string().describe("The Hebrew or Greek word behind it, transliterated, or empty if not certain"),
+  range: z.string().describe("What that original word covers, or empty if original is empty"),
+  elsewhere: z.string().describe("One place the same word is used tellingly elsewhere, or empty"),
 });
 
 /* ---------- prompts ---------- */
@@ -123,6 +132,15 @@ LIMITS
 
 CONCORDANCE (${PASSAGES.length} passages, KJV)
 ${CORPUS}`;
+
+const WORD_SYSTEM = `Someone reading the King James Version has tapped a word in a verse and wants to understand it.
+
+- "plain": one or two sentences on what the word means in this verse. If the King James sense differs from how the word is used today, say so plainly — that is usually the whole reason they tapped it.
+- "original": the Hebrew or Greek word behind it, transliterated (for example "chesed", "agape"). Leave this an empty string unless you are certain; a confidently wrong original is worse than none.
+- "range": if you gave an original, what that word covers in its own language. Otherwise an empty string.
+- "elsewhere": one other place the same original word is used in a way that lights this one up, with its reference. Otherwise an empty string.
+
+Never invent an etymology, a reference, or a Strong's number. Do not preach, and do not apply the verse to anyone's life — this is a dictionary entry, not a sermon. Address the reader as "you" only if needed.`;
 
 const LIVING_SYSTEM = `You help someone take one passage of scripture into their own life. They have written down what they are going through, and this passage was chosen for them.
 
@@ -189,6 +207,7 @@ async function limited(env: Env, route: Route, ip: string): Promise<boolean> {
     report: env.REPORT_LIMIT,
     podcast: env.PODCAST_LIMIT,
     followup: env.FOLLOWUP_LIMIT,
+    word: env.WORD_LIMIT,
   }[route];
   if (binding && !(await binding.limit({ key: ip })).success) return true;
   return overLimit(`${ip}:${route}`, LIMITS[route]);
@@ -283,6 +302,37 @@ async function living(input: Input, env: Env, client: Anthropic): Promise<Respon
     if (response.stop_reason === "refusal") return json({ error: "That could not be written." }, 422);
     const parsed = response.parsed_output;
     if (!parsed?.apply || !parsed?.reflect) return json({ error: "It came back empty." }, 502);
+    return json(cleanStrings(parsed));
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+async function word(input: Input, env: Env, client: Anthropic): Promise<Response> {
+  const term = str(input.word, 60);
+  const ref = str(input.ref, 80);
+  const verse = str(input.text, 1200);
+  if (!term || !verse) return json({ error: "Nothing to look up." }, 400);
+
+  try {
+    const response = await client.messages.parse({
+      model: "claude-opus-5",
+      max_tokens: 4000,
+      thinking: { type: "adaptive" },
+      // A dictionary entry is small work; low effort keeps it quick and cheap.
+      output_config: { effort: "low", format: zodOutputFormat(WordSchema) },
+      system: WORD_SYSTEM,
+      messages: [
+        {
+          role: "user",
+          content: `The verse (${ref || "King James Version"}):\n${verse}\n\nThe word they tapped: ${term}`,
+        },
+      ],
+    });
+
+    if (response.stop_reason === "refusal") return json({ error: "That could not be looked up." }, 422);
+    const parsed = response.parsed_output;
+    if (!parsed?.plain) return json({ error: "It came back empty." }, 502);
     return json(cleanStrings(parsed));
   } catch (error) {
     return failure(error);
@@ -407,6 +457,8 @@ export default {
       ? "living"
       : path.endsWith("/followup")
         ? "followup"
+        : path.endsWith("/word")
+          ? "word"
         : path.endsWith("/report")
           ? "report"
           : "reading";
@@ -440,6 +492,7 @@ export default {
 
     const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
     if (route === "followup") return followUp(input, env, client);
+    if (route === "word") return word(input, env, client);
     return route === "living" ? living(input, env, client) : reading(input, env, client);
   },
 };

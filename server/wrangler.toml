@@ -59,3 +59,11 @@ namespace_id = "1005"
   [ratelimits.simple]
   limit = 4
   period = 60
+
+[[ratelimits]]
+name = "WORD_LIMIT"
+namespace_id = "1006"
+
+  [ratelimits.simple]
+  limit = 20
+  period = 60
