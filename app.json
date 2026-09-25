@@ -57,7 +57,8 @@
           "enableBackgroundPlayback": false
         }
       ],
-      "expo-iap"
+      "expo-iap",
+      "./plugins/no-push-entitlement"
     ],
     "experiments": {
       "typedRoutes": true

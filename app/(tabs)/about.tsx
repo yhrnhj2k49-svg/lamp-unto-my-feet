@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { VERSES } from "../../src/data/verses";
@@ -8,6 +9,8 @@ import { PRIVACY_URL, SUPPORT_URL, TERMS_URL } from "../../src/links";
 import { useBilling } from "../../src/billing/purchases";
 import { FREE_PER_MONTH, useQuota } from "../../src/store/quota";
 import { useEntitlement } from "../../src/billing/entitlement";
+import { disableDaily, enableDaily, setDailyTime, useDaily } from "../../src/store/daily";
+import { verseForDay } from "../../src/engine/daily";
 import { font, label, space } from "../../src/theme";
 import { usePalette } from "../../src/usePalette";
 import PageGlow from "../../src/components/PageGlow";
@@ -27,6 +30,17 @@ export default function AboutScreen() {
   const billing = useBilling();
   const { used } = useQuota();
   const { plan } = useEntitlement();
+  const daily = useDaily();
+  const [refused, setRefused] = useState(false);
+  const today = verseForDay();
+
+  const TIMES = [
+    { hour: 6, minute: 0, label: "6 am" },
+    { hour: 7, minute: 0, label: "7 am" },
+    { hour: 8, minute: 0, label: "8 am" },
+    { hour: 9, minute: 0, label: "9 am" },
+    { hour: 21, minute: 0, label: "9 pm" },
+  ];
   const c = usePalette();
   const insets = useSafeAreaInsets();
   const { value: consent } = useConsent();
@@ -136,6 +150,61 @@ export default function AboutScreen() {
         </P>
         <A onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})}>Read the privacy policy</A>
         <A onPress={() => Linking.openURL(TERMS_URL).catch(() => {})}>Read the terms of use</A>
+      </Section>
+
+      <Section title="A verse each morning">
+        <P>
+          {daily.on
+            ? `On, at ${TIMES.find((t) => t.hour === daily.hour)?.label ?? `${daily.hour}:00`}. Today's is ${today.ref}.`
+            : "One passage each morning, on your lock screen. It is chosen on this phone, so it works with no signal and nothing is sent anywhere."}
+        </P>
+
+        {daily.on ? (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+            {TIMES.map((t) => {
+              const on = daily.hour === t.hour && daily.minute === t.minute;
+              return (
+                <Pressable
+                  key={t.label}
+                  onPress={() => void setDailyTime(t.hour, t.minute)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: on ? c.rubric : c.rule,
+                    backgroundColor: on ? c.rubricWash : "transparent",
+                    paddingVertical: 6,
+                    paddingHorizontal: 11,
+                  }}
+                >
+                  <Text style={{ fontFamily: font.ui, fontSize: 13, color: on ? c.rubric : c.ink2 }}>
+                    {t.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+
+        <A
+          onPress={() => {
+            if (daily.on) {
+              void disableDaily();
+              setRefused(false);
+              return;
+            }
+            void enableDaily().then((ok) => setRefused(!ok));
+          }}
+        >
+          {daily.on ? "Turn the morning verse off" : "Send me a verse each morning"}
+        </A>
+
+        {refused ? (
+          <P>
+            Your phone refused notifications for this app. Turn them on in the phone&apos;s
+            settings, then try again.
+          </P>
+        ) : null}
       </Section>
 
       <Section title="Readings">

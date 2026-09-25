@@ -24,7 +24,10 @@ import { hydrateBibles } from "../src/bible/store";
 import { hydrateConsent } from "../src/store/consent";
 import { hydrateVersion } from "../src/store/version";
 import { hydrateQuota } from "../src/store/quota";
+import { hydrateDaily } from "../src/store/daily";
 import { BillingProvider } from "../src/billing/purchases";
+import * as Notifications from "expo-notifications";
+import { router } from "expo-router";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -43,12 +46,22 @@ export default function RootLayout() {
     Archivo_600: Archivo_600SemiBold,
   });
 
+  // Tapping the morning verse opens that passage rather than just the app.
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const ref = response.notification.request.content.data?.ref;
+      if (typeof ref === "string") router.push({ pathname: "/verse", params: { ref } });
+    });
+    return () => sub.remove();
+  }, []);
+
   useEffect(() => {
     void hydrate();
     void hydrateBibles();
     void hydrateConsent();
     void hydrateVersion();
     void hydrateQuota();
+    void hydrateDaily();
   }, []);
 
   useEffect(() => {

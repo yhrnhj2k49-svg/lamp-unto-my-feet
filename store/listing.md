@@ -44,6 +44,9 @@ Ten complete translations, free to download and read with no signal: Berean Stan
 WATCH AND LISTEN
 The JESUS film and other full-length films from the Jesus Film Project, short animated studies from BibleProject, and daily prayer, Bible readings and teaching from six podcasts across Catholic, Protestant and non-denominational voices.
 
+A VERSE EACH MORNING
+One passage on your lock screen at the hour you choose, picked on your phone. It works with no signal, and nothing is sent anywhere to deliver it.
+
 KEEP WHAT LANDS
 Keep the passages you want to come back to. They stay on your phone.
 
